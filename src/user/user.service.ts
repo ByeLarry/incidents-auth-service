@@ -10,6 +10,8 @@ import { Session } from 'src/schemas/Session.schema';
 import { UserSendDto } from './dto/user-send.dto';
 import { SessionIdRecvDto } from './dto/session-id-recv.dto';
 import { LogoutRecvDto } from './dto/logout-recv.dto';
+import { RefreshRecvDto } from './dto/refresh-recv.dto';
+import { RefreshSendDto } from './dto/refresh-send.dto';
 
 @Injectable()
 export class UserService {
@@ -103,7 +105,7 @@ export class UserService {
         session_id: data.session_id_from_cookie,
       });
       if (!session) {
-        return '404';
+        return '401';
       }
 
       if (session.expires < new Date()) {
@@ -132,6 +134,44 @@ export class UserService {
         session_id: new_session_id,
       };
       return userSendDto;
+    } catch (error) {
+      return '500';
+    }
+  }
+
+  async refresh(data: RefreshRecvDto) {
+    try {
+      const session = await this.sessionModel.findOne({
+        session_id: data.session_id_from_cookie,
+      });
+      if (!session) {
+        return '401';
+      }
+
+      if (session.expires < new Date()) {
+        await session.deleteOne();
+        return '419';
+      }
+
+      if (session.csrf_token !== data.csrf_token) {
+        return '403';
+      }
+      const user = await this.userModel.findById(session.user);
+
+      if (!user) {
+        session.deleteOne();
+        return '404';
+      }
+
+      const new_session_id = v4();
+      session.session_id = new_session_id;
+      session.expires = new Date(Date.now() + 60 * 60 * 1000);
+      await session.save();
+      const refreshSendDto: RefreshSendDto = {
+        session_id: new_session_id,
+        csrf_token: session.csrf_token,
+      };
+      return refreshSendDto;
     } catch (error) {
       return '500';
     }

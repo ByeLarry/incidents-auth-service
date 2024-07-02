@@ -5,6 +5,7 @@ import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
 import { SessionIdRecvDto } from './dto/session-id-recv.dto';
 import { LogoutRecvDto } from './dto/logout-recv.dto';
+import { RefreshRecvDto } from './dto/refresh-recv.dto';
 
 @Controller()
 export class UserController {
@@ -23,6 +24,11 @@ export class UserController {
   @MessagePattern({ cmd: 'me' })
   me(@Payload() data: SessionIdRecvDto) {
     return this.userService.me(data);
+  }
+
+  @MessagePattern({ cmd: 'refresh' })
+  refresh(@Payload() data: RefreshRecvDto) {
+    return this.userService.refresh(data);
   }
 
   @MessagePattern({ cmd: 'logout' })
