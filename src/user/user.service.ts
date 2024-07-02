@@ -5,13 +5,52 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/schemas/User.schema';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import { v4 } from 'uuid';
+import { Session } from 'src/schemas/Session.schema';
+import { UserSendDto } from './dto/user-send.dto';
+import { SessionIdRecvDto } from './dto/session-id-recv.dto';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(Session.name) private sessionModel: Model<Session>,
+  ) {}
 
-  signin(data: SignInDto) {
-    return 'This action adds a new user' + JSON.stringify(data);
+  async signin(data: SignInDto) {
+    try {
+      const user = await this.userModel.findOne({
+        email: data.email,
+      });
+      if (!user) {
+        return '404';
+      }
+      const isMatch = await bcrypt.compare(data.password, user.password);
+      if (!isMatch) {
+        return '401';
+      }
+      const session_id = v4();
+      const csrf_token = v4();
+      const session = new this.sessionModel({
+        session_id: session_id,
+        user: user,
+        csrf_token: csrf_token,
+        expires: new Date(Date.now() + 60 * 60 * 1000),
+      });
+      await session.save();
+      const userSendDto: UserSendDto = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        _id: user._id.toString(),
+        activated: user.activated,
+        csrf_token: csrf_token,
+        session_id: session_id,
+      };
+      return userSendDto;
+    } catch (error) {
+      return '500';
+    }
   }
 
   async signup(data: SignUpDto) {
@@ -25,21 +64,70 @@ export class UserService {
       if (existingUser) {
         return '409';
       }
-
       const user = new this.userModel({
         name: data.name,
         surname: data.surname,
         email: data.email,
         password: hashedPassword,
-        csrf_token: 'afsdafsdafsdafdfdafsdafafsdaafsdfsda',
       });
-
       await user.save();
-      const result = user.toObject({
-        versionKey: false,
+      const session_id = v4();
+      const csrf_token = v4();
+      const session = new this.sessionModel({
+        session_id,
+        user,
+        csrf_token,
+        expires: new Date(Date.now() + 60 * 60 * 1000),
       });
-      delete result.password;
-      return result as Omit<User, 'password'>;
+      await session.save();
+      const userSendDto: UserSendDto = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        _id: user._id.toString(),
+        activated: user.activated,
+        csrf_token: csrf_token,
+        session_id: session_id,
+      };
+      return userSendDto;
+    } catch (error) {
+      return '500';
+    }
+  }
+
+  async me(data: SessionIdRecvDto) {
+    try {
+      const session = await this.sessionModel.findOne({
+        session_id: data.session_id_from_cookie,
+      });
+      if (!session) {
+        return '404';
+      }
+
+      if (session.expires < new Date()) {
+        return '419';
+      }
+      const user = await this.userModel.findById(session.user);
+
+      if (!user) {
+        return '404';
+      }
+      const new_session_id = v4();
+      const new_csrf_token = v4();
+      session.session_id = new_session_id;
+      session.expires = new Date(Date.now() + 60 * 60 * 1000);
+      session.csrf_token = new_csrf_token;
+      await session.save();
+      const userSendDto: UserSendDto = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        _id: user._id.toString(),
+        activated: user.activated,
+        csrf_token: new_csrf_token,
+        session_id: new_session_id,
+      };
+      return userSendDto;
     } catch (error) {
       return '500';
     }

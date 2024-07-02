@@ -20,8 +20,8 @@ export class User {
   @Prop()
   phone_number: string;
 
-  @Prop({ required: true })
-  csrf_token: string;
+  @Prop({ default: false })
+  activated: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

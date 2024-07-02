@@ -1,9 +1,10 @@
-import { Prop, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, SchemaFactory, Schema } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { User } from './User.schema';
 
 export type SessionDocument = HydratedDocument<Session>;
 
+@Schema({ collection: 'sessions' })
 export class Session {
   @Prop({ required: true })
   session_id: string;
