@@ -9,6 +9,7 @@ import { v4 } from 'uuid';
 import { Session } from 'src/schemas/Session.schema';
 import { UserSendDto } from './dto/user-send.dto';
 import { SessionIdRecvDto } from './dto/session-id-recv.dto';
+import { LogoutRecvDto } from './dto/logout-recv.dto';
 
 @Injectable()
 export class UserService {
@@ -91,6 +92,7 @@ export class UserService {
       };
       return userSendDto;
     } catch (error) {
+      console.log(error);
       return '500';
     }
   }
@@ -105,11 +107,13 @@ export class UserService {
       }
 
       if (session.expires < new Date()) {
+        await session.deleteOne();
         return '419';
       }
       const user = await this.userModel.findById(session.user);
 
       if (!user) {
+        session.deleteOne();
         return '404';
       }
       const new_session_id = v4();
@@ -128,6 +132,36 @@ export class UserService {
         session_id: new_session_id,
       };
       return userSendDto;
+    } catch (error) {
+      return '500';
+    }
+  }
+
+  async logout(data: LogoutRecvDto) {
+    try {
+      const session = await this.sessionModel.findOne({
+        session_id: data.session_id_from_cookie,
+      });
+      if (!session) {
+        return '404';
+      }
+
+      if (session.expires < new Date()) {
+        await session.deleteOne();
+        return '419';
+      }
+
+      if (session.csrf_token !== data.csrf_token) {
+        return '403';
+      }
+      const user = await this.userModel.findById(session.user);
+
+      if (!user) {
+        session.deleteOne();
+        return '404';
+      }
+      await session.deleteOne();
+      return '200';
     } catch (error) {
       return '500';
     }

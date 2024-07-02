@@ -4,6 +4,7 @@ import { UserService } from './user.service';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
 import { SessionIdRecvDto } from './dto/session-id-recv.dto';
+import { LogoutRecvDto } from './dto/logout-recv.dto';
 
 @Controller()
 export class UserController {
@@ -24,9 +25,8 @@ export class UserController {
     return this.userService.me(data);
   }
 
-  @MessagePattern({ cmd: 'findAllUser' })
-  handleMessage(data: string): string {
-    console.log('Message received:', data);
-    return 'Message processed!';
+  @MessagePattern({ cmd: 'logout' })
+  logout(@Payload() data: LogoutRecvDto) {
+    return this.userService.logout(data);
   }
 }
