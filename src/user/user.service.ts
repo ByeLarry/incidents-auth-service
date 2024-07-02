@@ -94,7 +94,6 @@ export class UserService {
       };
       return userSendDto;
     } catch (error) {
-      console.log(error);
       return '500';
     }
   }
@@ -118,20 +117,14 @@ export class UserService {
         session.deleteOne();
         return '404';
       }
-      const new_session_id = v4();
-      const new_csrf_token = v4();
-      session.session_id = new_session_id;
-      session.expires = new Date(Date.now() + 60 * 60 * 1000);
-      session.csrf_token = new_csrf_token;
-      await session.save();
       const userSendDto: UserSendDto = {
         name: user.name,
         surname: user.surname,
         email: user.email,
         _id: user._id.toString(),
         activated: user.activated,
-        csrf_token: new_csrf_token,
-        session_id: new_session_id,
+        csrf_token: session.csrf_token,
+        session_id: session.session_id,
       };
       return userSendDto;
     } catch (error) {
@@ -153,23 +146,16 @@ export class UserService {
         return '419';
       }
 
-      if (session.csrf_token !== data.csrf_token) {
-        return '403';
-      }
       const user = await this.userModel.findById(session.user);
 
       if (!user) {
         session.deleteOne();
         return '404';
       }
-
-      const new_session_id = v4();
-      session.session_id = new_session_id;
       session.expires = new Date(Date.now() + 60 * 60 * 1000);
       await session.save();
       const refreshSendDto: RefreshSendDto = {
-        session_id: new_session_id,
-        csrf_token: session.csrf_token,
+        session_id: data.session_id_from_cookie,
       };
       return refreshSendDto;
     } catch (error) {
