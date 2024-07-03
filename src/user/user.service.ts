@@ -12,16 +12,25 @@ import { SessionIdRecvDto } from './dto/session-id-recv.dto';
 import { LogoutRecvDto } from './dto/logout-recv.dto';
 import { RefreshRecvDto } from './dto/refresh-recv.dto';
 import { RefreshSendDto } from './dto/refresh-send.dto';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Session.name) private sessionModel: Model<Session>,
+    private readonly mailService: MailerService,
   ) {}
 
   async signin(data: SignInDto) {
     try {
+      // await this.mailService.sendMail({
+      //   to: 'gasoss221510@gmail.com',
+      //   from: process.env.SMTP_USER,
+      //   subject: 'Test for nest',
+      //   text: 'wiht nest mailer',
+      //   html: '<h1>Test5 </h1>',
+      // });
       const user = await this.userModel.findOne({
         email: data.email,
       });
@@ -52,6 +61,7 @@ export class UserService {
       };
       return userSendDto;
     } catch (error) {
+      console.log(error);
       return '500';
     }
   }
