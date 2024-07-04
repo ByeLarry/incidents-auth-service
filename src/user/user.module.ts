@@ -3,7 +3,7 @@ import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from 'src/schemas/User.schema';
-import { SessionSchema } from 'src/schemas/Session.schema';
+import { Session, SessionSchema } from 'src/schemas/Session.schema';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule } from '@nestjs/config';
 
@@ -19,10 +19,13 @@ import { ConfigModule } from '@nestjs/config';
           pass: process.env.SMTP_PASS,
         },
       },
+      defaults: {
+        from: process.env.SMTP_USER,
+      },
     }),
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
-      { name: 'Session', schema: SessionSchema },
+      { name: Session.name, schema: SessionSchema },
     ]),
   ],
   controllers: [UserController],

@@ -24,13 +24,6 @@ export class UserService {
 
   async signin(data: SignInDto) {
     try {
-      // await this.mailService.sendMail({
-      //   to: 'gasoss221510@gmail.com',
-      //   from: process.env.SMTP_USER,
-      //   subject: 'Test for nest',
-      //   text: 'wiht nest mailer',
-      //   html: '<h1>Test5 </h1>',
-      // });
       const user = await this.userModel.findOne({
         email: data.email,
       });
@@ -92,6 +85,7 @@ export class UserService {
         csrf_token,
         expires: new Date(Date.now() + 60 * 60 * 1000),
       });
+
       await session.save();
       const userSendDto: UserSendDto = {
         name: user.name,
@@ -102,6 +96,13 @@ export class UserService {
         csrf_token: csrf_token,
         session_id: session_id,
       };
+
+      // await this.mailService.sendMail({
+      //   to: data.email,
+      //   subject: 'Добро пожаловать в Incidents',
+      //   html: hello(user.name),
+      // });
+
       return userSendDto;
     } catch (error) {
       return '500';
