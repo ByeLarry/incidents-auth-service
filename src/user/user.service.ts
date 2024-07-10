@@ -13,6 +13,7 @@ import { LogoutRecvDto } from './dto/logout-recv.dto';
 import { RefreshRecvDto } from './dto/refresh-recv.dto';
 import { RefreshSendDto } from './dto/refresh-send.dto';
 import { MailerService } from '@nestjs-modules/mailer';
+import { AuthSendDto } from './dto/auth-send.dto';
 
 @Injectable()
 export class UserService {
@@ -169,6 +170,37 @@ export class UserService {
         session_id: data.session_id_from_cookie,
       };
       return refreshSendDto;
+    } catch (error) {
+      return '500';
+    }
+  }
+
+  async auth(data: AuthSendDto) {
+    try {
+      const session = await this.sessionModel.findOne({
+        session_id: data.session_id_from_cookie,
+      });
+      if (!session) {
+        return '401';
+      }
+
+      if (session.expires < new Date()) {
+        await session.deleteOne();
+        return '419';
+      }
+
+      if (session.csrf_token !== data.csrf_token) {
+        return '403';
+      }
+
+      const user = await this.userModel.findById(session.user);
+
+      if (!user) {
+        session.deleteOne();
+        return '404';
+      }
+
+      return '200';
     } catch (error) {
       return '500';
     }

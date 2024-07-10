@@ -4,4 +4,5 @@ export enum MsgAuthEnum {
   SIGNUP = 'signup',
   LOGOUT = 'logout',
   REFRESH = 'refresh',
+  AUTH = 'auth',
 }

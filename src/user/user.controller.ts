@@ -7,6 +7,7 @@ import { SessionIdRecvDto } from './dto/session-id-recv.dto';
 import { LogoutRecvDto } from './dto/logout-recv.dto';
 import { RefreshRecvDto } from './dto/refresh-recv.dto';
 import { MsgAuthEnum } from 'src/utils/msg.auth.enum';
+import { AuthSendDto } from './dto/auth-send.dto';
 
 @Controller()
 export class UserController {
@@ -35,5 +36,10 @@ export class UserController {
   @MessagePattern({ cmd: MsgAuthEnum.LOGOUT })
   logout(@Payload() data: LogoutRecvDto) {
     return this.userService.logout(data);
+  }
+
+  @MessagePattern({ cmd: MsgAuthEnum.AUTH })
+  auth(@Payload() data: AuthSendDto) {
+    return this.userService.auth(data);
   }
 }
