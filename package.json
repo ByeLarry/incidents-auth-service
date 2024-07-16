@@ -1,8 +1,8 @@
 {
   "name": "auth",
-  "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "version": "0.1.0",
+  "description": "Authorization microservice for the Incidents project",
+  "author": "Solovey Roman",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
