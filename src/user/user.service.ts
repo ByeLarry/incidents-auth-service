@@ -41,7 +41,7 @@ export class UserService {
         session_id: session_id,
         user: user,
         csrf_token: csrf_token,
-        expires: new Date(Date.now() + 60 * 60 * 1000),
+        expires: new Date(Date.now() + 60 * 60 * 1000 * 24),
       });
       await session.save();
       const userSendDto: UserSendDto = {
@@ -84,7 +84,7 @@ export class UserService {
         session_id,
         user,
         csrf_token,
-        expires: new Date(Date.now() + 60 * 60 * 1000),
+        expires: new Date(Date.now() + 60 * 60 * 1000 * 24),
       });
 
       await session.save();
@@ -164,7 +164,7 @@ export class UserService {
         session.deleteOne();
         return '404';
       }
-      session.expires = new Date(Date.now() + 60 * 60 * 1000);
+      session.expires = new Date(Date.now() + 60 * 60 * 1000 * 24);
       await session.save();
       const refreshSendDto: RefreshSendDto = {
         session_id: data.session_id_from_cookie,
