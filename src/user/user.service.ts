@@ -4,7 +4,6 @@ import { SignUpDto } from './dto/signup.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/schemas/User.schema';
 import { Model } from 'mongoose';
-import * as bcrypt from 'bcrypt';
 import { v4 } from 'uuid';
 import { Session } from 'src/schemas/Session.schema';
 import { UserSendDto } from './dto/user-send.dto';
@@ -14,6 +13,7 @@ import { RefreshRecvDto } from './dto/refresh-recv.dto';
 import { RefreshSendDto } from './dto/refresh-send.dto';
 import { MailerService } from '@nestjs-modules/mailer';
 import { AuthSendDto } from './dto/auth-send.dto';
+import { Crypt } from 'src/utils/crypt';
 
 @Injectable()
 export class UserService {
@@ -31,7 +31,7 @@ export class UserService {
       if (!user) {
         return '404';
       }
-      const isMatch = await bcrypt.compare(data.password, user.password);
+      const isMatch = Crypt.verifyPassword(user.password, data.password);
       if (!isMatch) {
         return '401';
       }
@@ -62,7 +62,7 @@ export class UserService {
 
   async signup(data: SignUpDto) {
     try {
-      const hashedPassword = await bcrypt.hash(data.password, 10);
+      const hashedPassword = Crypt.hashPassword(data.password);
 
       const existingUser = await this.userModel.findOne({
         email: data.email,
