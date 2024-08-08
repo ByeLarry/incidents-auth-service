@@ -9,12 +9,19 @@
 
 ## Установка
 
+### Локально
 ```bash
 # Установка зависимостей
 npm install
 
 # Запуск в dev режиме
 npm run start:dev
+```
+
+### Docker 
+```bash
+# Создание и запуск docker сервисов
+docker-compose up -d
 ```
 
 ## Проектирование
