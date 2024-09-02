@@ -13,32 +13,32 @@ import { AuthSendDto } from './dto/auth-send.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @MessagePattern({ cmd: MsgAuthEnum.SIGNUP })
+  @MessagePattern(MsgAuthEnum.SIGNUP)
   signup(@Payload() data: SignUpDto) {
     return this.userService.signup(data);
   }
 
-  @MessagePattern({ cmd: MsgAuthEnum.SIGNIN })
+  @MessagePattern(MsgAuthEnum.SIGNIN)
   signin(@Payload() data: SignInDto) {
     return this.userService.signin(data);
   }
 
-  @MessagePattern({ cmd: MsgAuthEnum.ME })
+  @MessagePattern(MsgAuthEnum.ME)
   me(@Payload() data: SessionIdRecvDto) {
     return this.userService.me(data);
   }
 
-  @MessagePattern({ cmd: MsgAuthEnum.REFRESH })
+  @MessagePattern(MsgAuthEnum.REFRESH)
   refresh(@Payload() data: RefreshRecvDto) {
     return this.userService.refresh(data);
   }
 
-  @MessagePattern({ cmd: MsgAuthEnum.LOGOUT })
+  @MessagePattern(MsgAuthEnum.LOGOUT)
   logout(@Payload() data: LogoutRecvDto) {
     return this.userService.logout(data);
   }
 
-  @MessagePattern({ cmd: MsgAuthEnum.AUTH })
+  @MessagePattern(MsgAuthEnum.AUTH)
   auth(@Payload() data: AuthSendDto) {
     return this.userService.auth(data);
   }
