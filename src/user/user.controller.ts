@@ -3,11 +3,9 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
-import { SessionIdRecvDto } from './dto/session-id-recv.dto';
-import { LogoutRecvDto } from './dto/logout-recv.dto';
-import { RefreshRecvDto } from './dto/refresh-recv.dto';
-import { MsgAuthEnum } from 'src/utils/msg.auth.enum';
-import { AuthSendDto } from './dto/auth-send.dto';
+import { MsgAuthEnum } from '../utils/msg.auth.enum';
+import { AuthAndLogoutDto } from './dto/authAndLogout.dto';
+import { SessionIdFromCookieDto } from './dto/sessionIdFromCookie.dto';
 
 @Controller()
 export class UserController {
@@ -24,22 +22,22 @@ export class UserController {
   }
 
   @MessagePattern(MsgAuthEnum.ME)
-  me(@Payload() data: SessionIdRecvDto) {
+  me(@Payload() data: SessionIdFromCookieDto) {
     return this.userService.me(data);
   }
 
   @MessagePattern(MsgAuthEnum.REFRESH)
-  refresh(@Payload() data: RefreshRecvDto) {
+  refresh(@Payload() data: SessionIdFromCookieDto) {
     return this.userService.refresh(data);
   }
 
   @MessagePattern(MsgAuthEnum.LOGOUT)
-  logout(@Payload() data: LogoutRecvDto) {
+  logout(@Payload() data: AuthAndLogoutDto) {
     return this.userService.logout(data);
   }
 
   @MessagePattern(MsgAuthEnum.AUTH)
-  auth(@Payload() data: AuthSendDto) {
+  auth(@Payload() data: AuthAndLogoutDto) {
     return this.userService.auth(data);
   }
 }

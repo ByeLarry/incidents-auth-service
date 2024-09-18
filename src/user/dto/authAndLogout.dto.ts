@@ -1,4 +1,4 @@
-export interface LogoutRecvDto {
+export interface AuthAndLogoutDto {
   session_id_from_cookie: string;
   csrf_token: string;
 }

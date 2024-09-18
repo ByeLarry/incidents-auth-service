@@ -2,18 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { SignInDto } from './dto/signin.dto';
 import { SignUpDto } from './dto/signup.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { User } from 'src/schemas/User.schema';
+import { User } from '../schemas/User.schema';
 import { Model } from 'mongoose';
 import { v4 } from 'uuid';
-import { Session } from 'src/schemas/Session.schema';
-import { UserSendDto } from './dto/user-send.dto';
-import { SessionIdRecvDto } from './dto/session-id-recv.dto';
-import { LogoutRecvDto } from './dto/logout-recv.dto';
-import { RefreshRecvDto } from './dto/refresh-recv.dto';
-import { RefreshSendDto } from './dto/refresh-send.dto';
+import { Session } from '../schemas/Session.schema';
+import { UserDto } from './dto/user.dto';
 import { MailerService } from '@nestjs-modules/mailer';
-import { AuthSendDto } from './dto/auth-send.dto';
-import { Crypt } from 'src/utils/crypt';
+import { AuthAndLogoutDto } from './dto/authAndLogout.dto';
+import { Crypt } from '../utils/crypt';
+import { HttpStatusExtends } from '../utils/extendsHttpStatus.enum';
+import { DateEnum } from '../utils/date.enum';
+import { SessionIdFromCookieDto } from './dto/sessionIdFromCookie.dto';
+import { SessionIdDto } from './dto/sessioinId.dto';
+
+type AsyncFunction<T> = () => Promise<T>;
 
 @Injectable()
 export class UserService {
@@ -23,113 +25,120 @@ export class UserService {
     private readonly mailService: MailerService,
   ) {}
 
-  async signin(data: SignInDto) {
+  private async handleAsyncOperation<T>(
+    operation: AsyncFunction<T>,
+  ): Promise<T | HttpStatusExtends> {
     try {
-      const user = await this.userModel.findOne({
-        email: data.email,
-      });
-      if (!user) {
-        return '404';
-      }
-      const isMatch = Crypt.verifyPassword(user.password, data.password);
-      if (!isMatch) {
-        return '401';
-      }
-      const session_id = v4();
-      const csrf_token = v4();
-      const session = new this.sessionModel({
-        session_id: session_id,
-        user: user,
-        csrf_token: csrf_token,
-        expires: new Date(Date.now() + 60 * 60 * 1000 * 24),
-      });
-      await session.save();
-      const userSendDto: UserSendDto = {
-        name: user.name,
-        surname: user.surname,
-        email: user.email,
-        _id: user._id.toString(),
-        activated: user.activated,
-        csrf_token: csrf_token,
-        session_id: session_id,
-      };
-      return userSendDto;
+      return await operation();
     } catch (error) {
-      console.log(error);
-      return '500';
+      return HttpStatusExtends.INTERNAL_SERVER_ERROR;
     }
   }
 
-  async signup(data: SignUpDto) {
-    try {
-      const hashedPassword = Crypt.hashPassword(data.password);
-
-      const existingUser = await this.userModel.findOne({
-        email: data.email,
-      });
-
-      if (existingUser) {
-        return '409';
-      }
-      const user = new this.userModel({
-        name: data.name,
-        surname: data.surname,
-        email: data.email,
-        password: hashedPassword,
-      });
-      await user.save();
-      const session_id = v4();
-      const csrf_token = v4();
-      const session = new this.sessionModel({
-        session_id,
-        user,
-        csrf_token,
-        expires: new Date(Date.now() + 60 * 60 * 1000 * 24),
-      });
-
-      await session.save();
-      const userSendDto: UserSendDto = {
-        name: user.name,
-        surname: user.surname,
-        email: user.email,
-        _id: user._id.toString(),
-        activated: user.activated,
-        csrf_token: csrf_token,
-        session_id: session_id,
-      };
-
-      // await this.mailService.sendMail({
-      //   to: data.email,
-      //   subject: 'Добро пожаловать в Incidents',
-      //   html: hello(user.name),
-      // });
-
-      return userSendDto;
-    } catch (error) {
-      return '500';
-    }
+  async signin(data: SignInDto): Promise<UserDto | HttpStatusExtends> {
+    return await this.handleAsyncOperation<HttpStatusExtends | UserDto>(
+      async () => {
+        const user = await this.userModel.findOne({
+          email: data.email,
+        });
+        if (!user) {
+          return HttpStatusExtends.NOT_FOUND;
+        }
+        const isMatch = Crypt.verifyPassword(user.password, data.password);
+        if (!isMatch) {
+          return HttpStatusExtends.UNAUTHORIZED;
+        }
+        const session_id = v4();
+        const csrf_token = v4();
+        const session = new this.sessionModel({
+          session_id: session_id,
+          user: user,
+          csrf_token: csrf_token,
+          expires: new Date(Date.now() + DateEnum.ONE_DAY),
+        });
+        await session.save();
+        const userSendDto: UserDto = {
+          name: user.name,
+          surname: user.surname,
+          email: user.email,
+          _id: user._id.toString(),
+          activated: user.activated,
+          csrf_token: csrf_token,
+          session_id: session_id,
+        };
+        return userSendDto;
+      },
+    );
   }
 
-  async me(data: SessionIdRecvDto) {
-    try {
+  async signup(data: SignUpDto): Promise<UserDto | HttpStatusExtends> {
+    return await this.handleAsyncOperation<HttpStatusExtends | UserDto>(
+      async () => {
+        {
+          const hashedPassword = Crypt.hashPassword(data.password);
+
+          const existingUser = await this.userModel.findOne({
+            email: data.email,
+          });
+
+          if (existingUser) {
+            return HttpStatusExtends.CONFLICT;
+          }
+          const user = new this.userModel({
+            name: data.name,
+            surname: data.surname,
+            email: data.email,
+            password: hashedPassword,
+          });
+          await user.save();
+          const session_id = v4();
+          const csrf_token = v4();
+          const session = new this.sessionModel({
+            session_id,
+            user,
+            csrf_token,
+            expires: new Date(Date.now() + DateEnum.ONE_DAY),
+          });
+
+          await session.save();
+          const userSendDto: UserDto = {
+            name: user.name,
+            surname: user.surname,
+            email: user.email,
+            _id: user._id.toString(),
+            activated: user.activated,
+            csrf_token: csrf_token,
+            session_id: session_id,
+          };
+
+          // await this.mailService.sendMail({
+          //   to: data.email,
+          //   subject: 'Добро пожаловать в Incidents',
+          //   html: hello(user.name),
+          // });
+
+          return userSendDto;
+        }
+      },
+    );
+  }
+
+  async me(data: SessionIdFromCookieDto): Promise<HttpStatusExtends | UserDto> {
+    return await this.handleAsyncOperation(async () => {
       const session = await this.sessionModel.findOne({
         session_id: data.session_id_from_cookie,
       });
       if (!session) {
-        return '401';
+        return HttpStatusExtends.UNAUTHORIZED;
       }
 
       if (session.expires < new Date()) {
         await session.deleteOne();
-        return '419';
+        return HttpStatusExtends.SESSION_EXPIRED;
       }
       const user = await this.userModel.findById(session.user);
 
-      if (!user) {
-        session.deleteOne();
-        return '404';
-      }
-      const userSendDto: UserSendDto = {
+      const userSendDto: UserDto = {
         name: user.name,
         surname: user.surname,
         email: user.email,
@@ -139,100 +148,74 @@ export class UserService {
         session_id: session.session_id,
       };
       return userSendDto;
-    } catch (error) {
-      return '500';
-    }
+    });
   }
 
-  async refresh(data: RefreshRecvDto) {
-    try {
+  async refresh(
+    data: SessionIdFromCookieDto,
+  ): Promise<HttpStatusExtends | SessionIdDto> {
+    return await this.handleAsyncOperation(async () => {
       const session = await this.sessionModel.findOne({
         session_id: data.session_id_from_cookie,
       });
       if (!session) {
-        return '401';
+        return HttpStatusExtends.UNAUTHORIZED;
       }
 
       if (session.expires < new Date()) {
         await session.deleteOne();
-        return '419';
+        return HttpStatusExtends.SESSION_EXPIRED;
       }
-
-      const user = await this.userModel.findById(session.user);
-
-      if (!user) {
-        session.deleteOne();
-        return '404';
-      }
-      session.expires = new Date(Date.now() + 60 * 60 * 1000 * 24);
+      session.expires = new Date(Date.now() + DateEnum.ONE_DAY);
       await session.save();
-      const refreshSendDto: RefreshSendDto = {
+      const refreshSendDto: SessionIdDto = {
         session_id: data.session_id_from_cookie,
       };
       return refreshSendDto;
-    } catch (error) {
-      return '500';
-    }
+    });
   }
 
-  async auth(data: AuthSendDto) {
-    try {
+  async auth(data: AuthAndLogoutDto): Promise<HttpStatusExtends> {
+    return await this.handleAsyncOperation<HttpStatusExtends>(async () => {
       const session = await this.sessionModel.findOne({
         session_id: data.session_id_from_cookie,
       });
       if (!session) {
-        return '401';
+        return HttpStatusExtends.UNAUTHORIZED;
       }
 
       if (session.expires < new Date()) {
         await session.deleteOne();
-        return '419';
+        return HttpStatusExtends.SESSION_EXPIRED;
       }
 
       if (session.csrf_token !== data.csrf_token) {
-        return '403';
+        return HttpStatusExtends.FORBIDDEN;
       }
 
-      const user = await this.userModel.findById(session.user);
-
-      if (!user) {
-        session.deleteOne();
-        return '404';
-      }
-
-      return '200';
-    } catch (error) {
-      return '500';
-    }
+      return HttpStatusExtends.NO_CONTENT;
+    });
   }
 
-  async logout(data: LogoutRecvDto) {
-    try {
+  async logout(data: AuthAndLogoutDto): Promise<HttpStatusExtends> {
+    return await this.handleAsyncOperation<HttpStatusExtends>(async () => {
       const session = await this.sessionModel.findOne({
         session_id: data.session_id_from_cookie,
       });
       if (!session) {
-        return '404';
+        return HttpStatusExtends.NOT_FOUND;
       }
 
       if (session.expires < new Date()) {
         await session.deleteOne();
-        return '419';
+        return HttpStatusExtends.SESSION_EXPIRED;
       }
 
       if (session.csrf_token !== data.csrf_token) {
-        return '403';
-      }
-      const user = await this.userModel.findById(session.user);
-
-      if (!user) {
-        session.deleteOne();
-        return '404';
+        return HttpStatusExtends.FORBIDDEN;
       }
       await session.deleteOne();
-      return '200';
-    } catch (error) {
-      return '500';
-    }
+      return HttpStatusExtends.NO_CONTENT;
+    });
   }
 }

@@ -4,9 +4,9 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { AppLoggerService } from 'src/utils/logger';
+import { Observable, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
+import { AppLoggerService } from '../utils/logger';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -14,12 +14,18 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const calledHandler = context.getHandler().name;
-
     return next.handle().pipe(
       tap((data) => {
         this.logger.log(
           `[${calledHandler}] - returned '${JSON.stringify(data).slice(0, 50)}'`,
         );
+      }),
+      catchError((error) => {
+        this.logger.error(
+          `[${calledHandler}] - error '${error.message}'`,
+          error,
+        );
+        return throwError(() => error);
       }),
     );
   }
