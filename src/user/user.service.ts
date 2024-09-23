@@ -14,6 +14,8 @@ import { HttpStatusExtends } from '../utils/extendsHttpStatus.enum';
 import { DateEnum } from '../utils/date.enum';
 import { SessionIdFromCookieDto } from './dto/sessionIdFromCookie.dto';
 import { SessionIdDto } from './dto/sessioinId.dto';
+import { MicroserviceResponseStatus } from './dto/microserviceResponseStatus.dto';
+import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.utiil';
 
 type AsyncFunction<T> = () => Promise<T>;
 
@@ -27,35 +29,90 @@ export class UserService {
 
   private async handleAsyncOperation<T>(
     operation: AsyncFunction<T>,
-  ): Promise<T | HttpStatusExtends> {
+  ): Promise<T | MicroserviceResponseStatus> {
     try {
       return await operation();
     } catch (error) {
-      return HttpStatusExtends.INTERNAL_SERVER_ERROR;
+      const res = MicroserviceResponseStatusFabric.create(
+        HttpStatusExtends.INTERNAL_SERVER_ERROR,
+        error,
+      );
+      return res;
     }
   }
 
-  async signin(data: SignInDto): Promise<UserDto | HttpStatusExtends> {
-    return await this.handleAsyncOperation<HttpStatusExtends | UserDto>(
-      async () => {
-        const user = await this.userModel.findOne({
+  async signin(data: SignInDto): Promise<UserDto | MicroserviceResponseStatus> {
+    return await this.handleAsyncOperation<
+      MicroserviceResponseStatus | UserDto
+    >(async () => {
+      const user = await this.userModel.findOne({
+        email: data.email,
+      });
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.NOT_FOUND,
+        );
+      }
+      const isMatch = Crypt.verifyPassword(user.password, data.password);
+      if (!isMatch) {
+        return MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.UNAUTHORIZED,
+        );
+      }
+      const session_id = v4();
+      const csrf_token = v4();
+      const session = new this.sessionModel({
+        session_id: session_id,
+        user: user,
+        csrf_token: csrf_token,
+        expires: new Date(Date.now() + DateEnum.ONE_DAY),
+      });
+      await session.save();
+      const userSendDto: UserDto = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        _id: user._id.toString(),
+        activated: user.activated,
+        csrf_token: csrf_token,
+        session_id: session_id,
+      };
+      return userSendDto;
+    });
+  }
+
+  async signup(data: SignUpDto): Promise<UserDto | MicroserviceResponseStatus> {
+    return await this.handleAsyncOperation<
+      MicroserviceResponseStatus | UserDto
+    >(async () => {
+      {
+        const hashedPassword = Crypt.hashPassword(data.password);
+
+        const existingUser = await this.userModel.findOne({
           email: data.email,
         });
-        if (!user) {
-          return HttpStatusExtends.NOT_FOUND;
+
+        if (existingUser) {
+          return MicroserviceResponseStatusFabric.create(
+            HttpStatusExtends.CONFLICT,
+          );
         }
-        const isMatch = Crypt.verifyPassword(user.password, data.password);
-        if (!isMatch) {
-          return HttpStatusExtends.UNAUTHORIZED;
-        }
+        const user = new this.userModel({
+          name: data.name,
+          surname: data.surname,
+          email: data.email,
+          password: hashedPassword,
+        });
+        await user.save();
         const session_id = v4();
         const csrf_token = v4();
         const session = new this.sessionModel({
-          session_id: session_id,
-          user: user,
-          csrf_token: csrf_token,
+          session_id,
+          user,
+          csrf_token,
           expires: new Date(Date.now() + DateEnum.ONE_DAY),
         });
+
         await session.save();
         const userSendDto: UserDto = {
           name: user.name,
@@ -66,75 +123,36 @@ export class UserService {
           csrf_token: csrf_token,
           session_id: session_id,
         };
+
+        // await this.mailService.sendMail({
+        //   to: data.email,
+        //   subject: 'Добро пожаловать в Incidents',
+        //   html: hello(user.name),
+        // });
+
         return userSendDto;
-      },
-    );
+      }
+    });
   }
 
-  async signup(data: SignUpDto): Promise<UserDto | HttpStatusExtends> {
-    return await this.handleAsyncOperation<HttpStatusExtends | UserDto>(
-      async () => {
-        {
-          const hashedPassword = Crypt.hashPassword(data.password);
-
-          const existingUser = await this.userModel.findOne({
-            email: data.email,
-          });
-
-          if (existingUser) {
-            return HttpStatusExtends.CONFLICT;
-          }
-          const user = new this.userModel({
-            name: data.name,
-            surname: data.surname,
-            email: data.email,
-            password: hashedPassword,
-          });
-          await user.save();
-          const session_id = v4();
-          const csrf_token = v4();
-          const session = new this.sessionModel({
-            session_id,
-            user,
-            csrf_token,
-            expires: new Date(Date.now() + DateEnum.ONE_DAY),
-          });
-
-          await session.save();
-          const userSendDto: UserDto = {
-            name: user.name,
-            surname: user.surname,
-            email: user.email,
-            _id: user._id.toString(),
-            activated: user.activated,
-            csrf_token: csrf_token,
-            session_id: session_id,
-          };
-
-          // await this.mailService.sendMail({
-          //   to: data.email,
-          //   subject: 'Добро пожаловать в Incidents',
-          //   html: hello(user.name),
-          // });
-
-          return userSendDto;
-        }
-      },
-    );
-  }
-
-  async me(data: SessionIdFromCookieDto): Promise<HttpStatusExtends | UserDto> {
+  async me(
+    data: SessionIdFromCookieDto,
+  ): Promise<MicroserviceResponseStatus | UserDto> {
     return await this.handleAsyncOperation(async () => {
       const session = await this.sessionModel.findOne({
         session_id: data.session_id_from_cookie,
       });
       if (!session) {
-        return HttpStatusExtends.UNAUTHORIZED;
+        return MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.UNAUTHORIZED,
+        );
       }
 
       if (session.expires < new Date()) {
         await session.deleteOne();
-        return HttpStatusExtends.SESSION_EXPIRED;
+        return MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.SESSION_EXPIRED,
+        );
       }
       const user = await this.userModel.findById(session.user);
 
@@ -153,18 +171,22 @@ export class UserService {
 
   async refresh(
     data: SessionIdFromCookieDto,
-  ): Promise<HttpStatusExtends | SessionIdDto> {
+  ): Promise<MicroserviceResponseStatus | SessionIdDto> {
     return await this.handleAsyncOperation(async () => {
       const session = await this.sessionModel.findOne({
         session_id: data.session_id_from_cookie,
       });
       if (!session) {
-        return HttpStatusExtends.UNAUTHORIZED;
+        return MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.UNAUTHORIZED,
+        );
       }
 
       if (session.expires < new Date()) {
         await session.deleteOne();
-        return HttpStatusExtends.SESSION_EXPIRED;
+        return MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.SESSION_EXPIRED,
+        );
       }
       session.expires = new Date(Date.now() + DateEnum.ONE_DAY);
       await session.save();
@@ -175,47 +197,67 @@ export class UserService {
     });
   }
 
-  async auth(data: AuthAndLogoutDto): Promise<HttpStatusExtends> {
-    return await this.handleAsyncOperation<HttpStatusExtends>(async () => {
-      const session = await this.sessionModel.findOne({
-        session_id: data.session_id_from_cookie,
-      });
-      if (!session) {
-        return HttpStatusExtends.UNAUTHORIZED;
-      }
+  async auth(data: AuthAndLogoutDto): Promise<MicroserviceResponseStatus> {
+    return await this.handleAsyncOperation<MicroserviceResponseStatus>(
+      async () => {
+        const session = await this.sessionModel.findOne({
+          session_id: data.session_id_from_cookie,
+        });
+        if (!session) {
+          return MicroserviceResponseStatusFabric.create(
+            HttpStatusExtends.UNAUTHORIZED,
+          );
+        }
 
-      if (session.expires < new Date()) {
-        await session.deleteOne();
-        return HttpStatusExtends.SESSION_EXPIRED;
-      }
+        if (session.expires < new Date()) {
+          await session.deleteOne();
+          return MicroserviceResponseStatusFabric.create(
+            HttpStatusExtends.SESSION_EXPIRED,
+          );
+        }
 
-      if (session.csrf_token !== data.csrf_token) {
-        return HttpStatusExtends.FORBIDDEN;
-      }
+        if (session.csrf_token !== data.csrf_token) {
+          return MicroserviceResponseStatusFabric.create(
+            HttpStatusExtends.FORBIDDEN,
+          );
+        }
 
-      return HttpStatusExtends.NO_CONTENT;
-    });
+        return MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.NO_CONTENT,
+        );
+      },
+    );
   }
 
-  async logout(data: AuthAndLogoutDto): Promise<HttpStatusExtends> {
-    return await this.handleAsyncOperation<HttpStatusExtends>(async () => {
-      const session = await this.sessionModel.findOne({
-        session_id: data.session_id_from_cookie,
-      });
-      if (!session) {
-        return HttpStatusExtends.NOT_FOUND;
-      }
+  async logout(data: AuthAndLogoutDto): Promise<MicroserviceResponseStatus> {
+    return await this.handleAsyncOperation<MicroserviceResponseStatus>(
+      async () => {
+        const session = await this.sessionModel.findOne({
+          session_id: data.session_id_from_cookie,
+        });
+        if (!session) {
+          return MicroserviceResponseStatusFabric.create(
+            HttpStatusExtends.UNAUTHORIZED,
+          );
+        }
 
-      if (session.expires < new Date()) {
+        if (session.expires < new Date()) {
+          await session.deleteOne();
+          return MicroserviceResponseStatusFabric.create(
+            HttpStatusExtends.SESSION_EXPIRED,
+          );
+        }
+
+        if (session.csrf_token !== data.csrf_token) {
+          return MicroserviceResponseStatusFabric.create(
+            HttpStatusExtends.FORBIDDEN,
+          );
+        }
         await session.deleteOne();
-        return HttpStatusExtends.SESSION_EXPIRED;
-      }
-
-      if (session.csrf_token !== data.csrf_token) {
-        return HttpStatusExtends.FORBIDDEN;
-      }
-      await session.deleteOne();
-      return HttpStatusExtends.NO_CONTENT;
-    });
+        return MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.NO_CONTENT,
+        );
+      },
+    );
   }
 }

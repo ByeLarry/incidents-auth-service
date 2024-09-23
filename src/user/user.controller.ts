@@ -3,7 +3,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
-import { MsgAuthEnum } from '../utils/msg.auth.enum';
+import { MsgAuthEnum } from '../utils/msgAuth.enum';
 import { AuthAndLogoutDto } from './dto/authAndLogout.dto';
 import { SessionIdFromCookieDto } from './dto/sessionIdFromCookie.dto';
 
