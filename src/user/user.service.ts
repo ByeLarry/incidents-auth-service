@@ -15,7 +15,7 @@ import { DateEnum } from '../utils/date.enum';
 import { SessionIdFromCookieDto } from './dto/sessionIdFromCookie.dto';
 import { SessionIdDto } from './dto/sessioinId.dto';
 import { MicroserviceResponseStatus } from './dto/microserviceResponseStatus.dto';
-import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.utiil';
+import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.util';
 
 type AsyncFunction<T> = () => Promise<T>;
 
