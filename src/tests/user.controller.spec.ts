@@ -8,6 +8,7 @@ import { HttpStatusExtends } from '../utils/extendsHttpStatus.enum';
 import { SessionIdFromCookieDto } from '../user/dto/sessionIdFromCookie.dto';
 import { SessionIdDto } from '../user/dto/sessioinId.dto';
 import { AuthAndLogoutDto } from '../user/dto/authAndLogout.dto';
+import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.util';
 
 describe('UserController', () => {
   let controller: UserController;
@@ -127,10 +128,12 @@ describe('UserController', () => {
         session_id_from_cookie: 'test',
         csrf_token: 'test',
       };
-      const result: HttpStatusExtends = HttpStatusExtends.NO_CONTENT;
+      const result = MicroserviceResponseStatusFabric.create(
+        HttpStatusExtends.NO_CONTENT,
+      );
       jest.spyOn(service, 'logout').mockResolvedValue(result);
 
-      expect(await controller.logout(dto)).toBe(result);
+      expect(await controller.logout(dto)).toEqual(result);
       expect(service.logout).toHaveBeenCalledWith(dto);
     });
   });
@@ -141,10 +144,12 @@ describe('UserController', () => {
         session_id_from_cookie: 'test',
         csrf_token: 'test',
       };
-      const result = HttpStatusExtends.NO_CONTENT;
+      const result = MicroserviceResponseStatusFabric.create(
+        HttpStatusExtends.NO_CONTENT,
+      );
       jest.spyOn(service, 'auth').mockResolvedValue(result);
 
-      expect(await controller.auth(dto)).toBe(result);
+      expect(await controller.auth(dto)).toEqual(result);
       expect(service.auth).toHaveBeenCalledWith(dto);
     });
   });

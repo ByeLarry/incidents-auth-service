@@ -14,6 +14,7 @@ import { AuthAndLogoutDto } from '../user/dto/authAndLogout.dto';
 import { HttpStatusExtends } from '../utils/extendsHttpStatus.enum';
 import { UserDto } from '../user/dto/user.dto';
 import { ConfigModule } from '@nestjs/config';
+import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.util';
 
 describe('UserController Integration Tests', () => {
   let controller: UserController;
@@ -142,7 +143,9 @@ describe('UserController Integration Tests', () => {
       csrf_token: signupResponse.csrf_token,
     };
     const response = await controller.auth(authDto);
-    expect(response).toBe(HttpStatusExtends.NO_CONTENT);
+    expect(response).toEqual(
+      MicroserviceResponseStatusFabric.create(HttpStatusExtends.NO_CONTENT),
+    );
   });
 
   it('should handle session logout', async () => {
@@ -159,6 +162,8 @@ describe('UserController Integration Tests', () => {
       csrf_token: signupResponse.csrf_token,
     };
     const response = await controller.logout(logoutDto);
-    expect(response).toBe(HttpStatusExtends.NO_CONTENT);
+    expect(response).toEqual(
+      MicroserviceResponseStatusFabric.create(HttpStatusExtends.NO_CONTENT),
+    );
   });
 });

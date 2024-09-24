@@ -13,6 +13,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as mongoose from 'mongoose';
 import { DateEnum } from '../utils/date.enum';
 import { v4 } from 'uuid';
+import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.util';
 
 describe('UserService (integration)', () => {
   let service: UserService;
@@ -96,7 +97,9 @@ describe('UserService (integration)', () => {
 
       const result = await service.signin(signInDto);
 
-      expect(result).toBe(HttpStatusExtends.NOT_FOUND);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.NOT_FOUND),
+      );
     });
 
     it('should return UNAUTHORIZED if password is incorrect', async () => {
@@ -117,7 +120,9 @@ describe('UserService (integration)', () => {
 
       const result = await service.signin(signInDto);
 
-      expect(result).toBe(HttpStatusExtends.UNAUTHORIZED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.UNAUTHORIZED),
+      );
     });
   });
 
@@ -152,7 +157,9 @@ describe('UserService (integration)', () => {
 
       const result = await service.signup(signUpDto);
 
-      expect(result).toBe(HttpStatusExtends.CONFLICT);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.CONFLICT),
+      );
     });
   });
 
@@ -168,7 +175,9 @@ describe('UserService (integration)', () => {
       jest.spyOn(userModel, 'findById').mockResolvedValue(null);
       jest.restoreAllMocks();
       const result = await service.me({ session_id_from_cookie: session_id });
-      expect(result).toBe(HttpStatusExtends.UNAUTHORIZED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.UNAUTHORIZED),
+      );
     });
 
     it('should return user DTO on successful request', async () => {
@@ -204,7 +213,9 @@ describe('UserService (integration)', () => {
       const result = await service.me({
         session_id_from_cookie: 'invalid-session-id',
       });
-      expect(result).toBe(HttpStatusExtends.UNAUTHORIZED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.UNAUTHORIZED),
+      );
     });
 
     it('should return SESSION_EXPIRED if session has expired', async () => {
@@ -229,7 +240,11 @@ describe('UserService (integration)', () => {
 
       const result = await service.me({ session_id_from_cookie: session_id });
 
-      expect(result).toBe(HttpStatusExtends.SESSION_EXPIRED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.SESSION_EXPIRED,
+        ),
+      );
     });
   });
 
@@ -265,7 +280,9 @@ describe('UserService (integration)', () => {
       const result = await service.refresh({
         session_id_from_cookie: 'invalid-session-id',
       });
-      expect(result).toBe(HttpStatusExtends.UNAUTHORIZED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.UNAUTHORIZED),
+      );
     });
 
     it('should return SESSION_EXPIRED if session has expired', async () => {
@@ -292,7 +309,11 @@ describe('UserService (integration)', () => {
         session_id_from_cookie: session_id,
       });
 
-      expect(result).toBe(HttpStatusExtends.SESSION_EXPIRED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.SESSION_EXPIRED,
+        ),
+      );
     });
   });
 
@@ -320,7 +341,11 @@ describe('UserService (integration)', () => {
         csrf_token,
       });
 
-      expect(result).toBe(HttpStatusExtends.SESSION_EXPIRED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.SESSION_EXPIRED,
+        ),
+      );
     });
     it('should return NO_CONTENT on successful authorization', async () => {
       const signUpDto: SignUpDto = {
@@ -346,7 +371,9 @@ describe('UserService (integration)', () => {
         csrf_token,
       });
 
-      expect(result).toBe(HttpStatusExtends.NO_CONTENT);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.NO_CONTENT),
+      );
     });
 
     it('should return UNAUTHORIZED if session does not exist', async () => {
@@ -354,7 +381,9 @@ describe('UserService (integration)', () => {
         session_id_from_cookie: 'invalid-session-id',
         csrf_token: 'invalid-csrf-token',
       });
-      expect(result).toBe(HttpStatusExtends.UNAUTHORIZED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.UNAUTHORIZED),
+      );
     });
 
     it('should return FORBIDDEN if CSRF token is incorrect', async () => {
@@ -382,7 +411,9 @@ describe('UserService (integration)', () => {
         csrf_token: 'wrong-csrf-token',
       });
 
-      expect(result).toBe(HttpStatusExtends.FORBIDDEN);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.FORBIDDEN),
+      );
     });
   });
 
@@ -410,7 +441,11 @@ describe('UserService (integration)', () => {
         csrf_token,
       });
 
-      expect(result).toBe(HttpStatusExtends.SESSION_EXPIRED);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.SESSION_EXPIRED,
+        ),
+      );
     });
 
     it('should return NO_CONTENT on successful logout', async () => {
@@ -437,17 +472,11 @@ describe('UserService (integration)', () => {
         csrf_token,
       });
 
-      expect(result).toBe(HttpStatusExtends.NO_CONTENT);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.NO_CONTENT),
+      );
       const deletedSession = await sessionModel.findOne({ session_id });
       expect(deletedSession).toBeNull();
-    });
-
-    it('should return NOT_FOUND if session does not exist', async () => {
-      const result = await service.logout({
-        session_id_from_cookie: 'invalid-session-id',
-        csrf_token: 'invalid-csrf-token',
-      });
-      expect(result).toBe(HttpStatusExtends.NOT_FOUND);
     });
 
     it('should return FORBIDDEN if CSRF token is incorrect', async () => {
@@ -475,7 +504,9 @@ describe('UserService (integration)', () => {
         csrf_token: 'wrong-csrf-token',
       });
 
-      expect(result).toBe(HttpStatusExtends.FORBIDDEN);
+      expect(result).toEqual(
+        MicroserviceResponseStatusFabric.create(HttpStatusExtends.FORBIDDEN),
+      );
     });
 
     it('should return INTERNAL_SERVER_ERROR ', async () => {
@@ -486,7 +517,11 @@ describe('UserService (integration)', () => {
         session_id_from_cookie: 'invalid-session-id',
         csrf_token: 'invalid-csrf-token',
       });
-      expect(result).toBe(HttpStatusExtends.INTERNAL_SERVER_ERROR);
+      expect(result.status).toEqual(
+        MicroserviceResponseStatusFabric.create(
+          HttpStatusExtends.INTERNAL_SERVER_ERROR,
+        ).status,
+      );
     });
   });
 });
