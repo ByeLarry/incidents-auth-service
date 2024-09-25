@@ -1,4 +1,4 @@
-import { RefreshTokenDto } from './refreshToken.dto';
+import { RefreshTokenDto } from './refresh-token.dto';
 
 export class TokensDto {
   accessToken: string;
