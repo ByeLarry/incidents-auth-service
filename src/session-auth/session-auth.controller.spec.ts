@@ -8,9 +8,9 @@ import {
   SignInDto,
   SignUpDto,
   UserDto,
-} from '../lib/dto';
-import { HttpStatusExtends } from '../lib/enums';
-import { MicroserviceResponseStatusFabric } from '../lib/utils';
+} from '../libs/dto';
+import { HttpStatusExtends } from '../libs/enums';
+import { MicroserviceResponseStatusFabric } from '../libs/utils';
 
 describe('UserController', () => {
   let controller: SessionAuthController;

@@ -8,10 +8,10 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as mongoose from 'mongoose';
 import { v4 } from 'uuid';
 import { SessionAuthService } from './session-auth.service';
-import { Crypt } from '../lib/helpers';
-import { SignInDto, SignUpDto } from '../lib/dto';
-import { DateEnum, HttpStatusExtends } from '../lib/enums';
-import { MicroserviceResponseStatusFabric } from '../lib/utils';
+import { Crypt } from '../libs/helpers';
+import { SignInDto, SignUpDto } from '../libs/dto';
+import { DateEnum, HttpStatusExtends } from '../libs/enums';
+import { MicroserviceResponseStatusFabric } from '../libs/utils';
 
 describe('UserService (integration)', () => {
   let service: SessionAuthService;

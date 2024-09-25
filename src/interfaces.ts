@@ -1,4 +1,4 @@
-import { HttpStatusExtends } from './lib/enums';
+import { HttpStatusExtends } from './libs/enums';
 
 export interface IMicroserviceResponseStatus {
   status: HttpStatusExtends;

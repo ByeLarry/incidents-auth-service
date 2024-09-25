@@ -13,10 +13,10 @@ import {
   SignUpDto,
   TokensDto,
   UserDto,
-} from '../lib/dto';
-import { MicroserviceResponseStatusFabric } from '../lib/utils';
-import { HttpStatusExtends } from '../lib/enums';
-import { Crypt } from '../lib/helpers';
+} from '../libs/dto';
+import { MicroserviceResponseStatusFabric } from '../libs/utils';
+import { HttpStatusExtends } from '../libs/enums';
+import { Crypt } from '../libs/helpers';
 
 type AsyncFunction<T> = () => Promise<T>;
 

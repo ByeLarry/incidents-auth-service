@@ -1,8 +1,8 @@
 import { Controller } from '@nestjs/common';
 import { JwtAuthService } from './jwt-auth.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { MsgAuthEnum } from '../lib/enums';
-import { SignInDto, SignUpDto } from '../lib/dto';
+import { MsgAuthEnum } from '../libs/enums';
+import { SignInDto, SignUpDto } from '../libs/dto';
 
 /**
  * @deprecated

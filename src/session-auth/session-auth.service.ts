@@ -6,8 +6,8 @@ import { v4 } from 'uuid';
 import { Session } from '../schemas/Session.schema';
 import { MailerService } from '@nestjs-modules/mailer';
 import { IMicroserviceResponseStatus } from '../interfaces';
-import { MicroserviceResponseStatusFabric } from '../lib/utils';
-import { DateEnum, HttpStatusExtends } from '../lib/enums';
+import { MicroserviceResponseStatusFabric } from '../libs/utils';
+import { DateEnum, HttpStatusExtends } from '../libs/enums';
 import {
   AuthAndLogoutDto,
   SessionIdDto,
@@ -15,8 +15,8 @@ import {
   SignInDto,
   SignUpDto,
   UserDto,
-} from '../lib/dto';
-import { Crypt } from '../lib/helpers';
+} from '../libs/dto';
+import { Crypt } from '../libs/helpers';
 
 type AsyncFunction<T> = () => Promise<T>;
 

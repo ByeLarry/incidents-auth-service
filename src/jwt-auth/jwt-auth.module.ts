@@ -6,7 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../schemas/User.schema';
 import { Token, TokenSchema } from '../schemas/Token.schema';
-import { options } from '../lib/utils';
+import { options } from '../libs/utils';
 
 /**
  * @deprecated

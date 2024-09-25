@@ -1,13 +1,13 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { MsgAuthEnum } from '../lib/enums';
+import { MsgAuthEnum } from '../libs/enums';
 import { SessionAuthService } from './session-auth.service';
 import {
   AuthAndLogoutDto,
   SessionIdFromCookieDto,
   SignInDto,
   SignUpDto,
-} from '../lib/dto';
+} from '../libs/dto';
 
 @Controller()
 export class SessionAuthController {

@@ -1,7 +1,7 @@
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of, throwError } from 'rxjs';
 import { LoggingInterceptor } from '../interceptors/logger.interceptor';
-import { AppLoggerService } from '../lib/helpers';
+import { AppLoggerService } from '../libs/helpers';
 
 describe('LoggingInterceptor', () => {
   let interceptor: LoggingInterceptor;

@@ -3,7 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { SessionAuthModule } from './session-auth/session-auth.module';
-import { mailerOptionsFactory } from './lib/utils';
+import { mailerOptionsFactory } from './libs/utils';
 
 @Module({
   imports: [
