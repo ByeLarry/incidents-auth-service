@@ -1,4 +1,4 @@
-import { Crypt } from '../utils/crypt';
+import { Crypt } from './index';
 
 describe('Crypt', () => {
   it('should generate a hash from a password', () => {

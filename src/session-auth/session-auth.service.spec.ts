@@ -1,22 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserService } from '../user/user.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserSchema } from '../schemas/User.schema';
 import { Session, SessionSchema } from '../schemas/Session.schema';
 import { MailerService } from '@nestjs-modules/mailer';
-import { Crypt } from '../utils/crypt';
-import { SignInDto } from '../user/dto/signin.dto';
-import { SignUpDto } from '../user/dto/signup.dto';
-import { HttpStatusExtends } from '../utils/extendsHttpStatus.enum';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as mongoose from 'mongoose';
-import { DateEnum } from '../utils/date.enum';
 import { v4 } from 'uuid';
-import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.util';
+import { SessionAuthService } from './session-auth.service';
+import { Crypt } from '../lib/helpers';
+import { SignInDto, SignUpDto } from '../lib/dto';
+import { DateEnum, HttpStatusExtends } from '../lib/enums';
+import { MicroserviceResponseStatusFabric } from '../lib/utils';
 
 describe('UserService (integration)', () => {
-  let service: UserService;
+  let service: SessionAuthService;
   let userModel: Model<User>;
   let sessionModel: Model<Session>;
   let mongoServer: MongoMemoryServer;
@@ -29,7 +27,7 @@ describe('UserService (integration)', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        UserService,
+        SessionAuthService,
         {
           provide: getModelToken(User.name),
           useValue: mongoose.model(User.name, UserSchema),
@@ -47,7 +45,7 @@ describe('UserService (integration)', () => {
       ],
     }).compile();
 
-    service = module.get<UserService>(UserService);
+    service = module.get<SessionAuthService>(SessionAuthService);
     userModel = module.get<Model<User>>(getModelToken(User.name));
     sessionModel = module.get<Model<Session>>(getModelToken(Session.name));
   });

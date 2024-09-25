@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppLoggerService } from '../utils/logger';
+import { AppLoggerService } from './logger';
 import { createLogger, Logger } from 'winston';
 
 jest.mock('winston', () => ({

@@ -1,25 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserController } from '../user/user.controller';
-import { UserService } from '../user/user.service';
-import { SignUpDto } from '../user/dto/signup.dto';
-import { SignInDto } from '../user/dto/signin.dto';
-import { UserDto } from '../user/dto/user.dto';
-import { HttpStatusExtends } from '../utils/extendsHttpStatus.enum';
-import { SessionIdFromCookieDto } from '../user/dto/sessionIdFromCookie.dto';
-import { SessionIdDto } from '../user/dto/sessioinId.dto';
-import { AuthAndLogoutDto } from '../user/dto/authAndLogout.dto';
-import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.util';
+import { SessionAuthController } from './session-auth.controller';
+import { SessionAuthService } from './session-auth.service';
+import {
+  AuthAndLogoutDto,
+  SessionIdDto,
+  SessionIdFromCookieDto,
+  SignInDto,
+  SignUpDto,
+  UserDto,
+} from '../lib/dto';
+import { HttpStatusExtends } from '../lib/enums';
+import { MicroserviceResponseStatusFabric } from '../lib/utils';
 
 describe('UserController', () => {
-  let controller: UserController;
-  let service: UserService;
+  let controller: SessionAuthController;
+  let service: SessionAuthService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [UserController],
+      controllers: [SessionAuthController],
       providers: [
         {
-          provide: UserService,
+          provide: SessionAuthService,
           useValue: {
             signup: jest.fn(),
             signin: jest.fn(),
@@ -32,8 +34,8 @@ describe('UserController', () => {
       ],
     }).compile();
 
-    controller = module.get<UserController>(UserController);
-    service = module.get<UserService>(UserService);
+    controller = module.get<SessionAuthController>(SessionAuthController);
+    service = module.get<SessionAuthService>(SessionAuthService);
   });
 
   it('should be defined', () => {

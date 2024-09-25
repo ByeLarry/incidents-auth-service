@@ -1,4 +1,6 @@
 import { IsBoolean, IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { TokensDto } from './tokens.dto';
+import { Type } from 'class-transformer';
 
 export class UserDto {
   @IsString()
@@ -23,10 +25,11 @@ export class UserDto {
   activated: boolean;
 
   @IsString()
-  @IsNotEmpty()
-  csrf_token: string;
+  csrf_token?: string;
 
   @IsString()
-  @IsNotEmpty()
-  session_id: string;
+  session_id?: string;
+
+  @Type(() => TokensDto)
+  tokens?: TokensDto;
 }

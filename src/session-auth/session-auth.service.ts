@@ -1,26 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { SignInDto } from './dto/signin.dto';
-import { SignUpDto } from './dto/signup.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from '../schemas/User.schema';
 import { Model } from 'mongoose';
 import { v4 } from 'uuid';
 import { Session } from '../schemas/Session.schema';
-import { UserDto } from './dto/user.dto';
 import { MailerService } from '@nestjs-modules/mailer';
-import { AuthAndLogoutDto } from './dto/authAndLogout.dto';
-import { Crypt } from '../utils/crypt';
-import { HttpStatusExtends } from '../utils/extendsHttpStatus.enum';
-import { DateEnum } from '../utils/date.enum';
-import { SessionIdFromCookieDto } from './dto/sessionIdFromCookie.dto';
-import { SessionIdDto } from './dto/sessioinId.dto';
-import { MicroserviceResponseStatus } from './dto/microserviceResponseStatus.dto';
-import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.util';
+import { IMicroserviceResponseStatus } from '../interfaces';
+import { MicroserviceResponseStatusFabric } from '../lib/utils';
+import { DateEnum, HttpStatusExtends } from '../lib/enums';
+import {
+  AuthAndLogoutDto,
+  SessionIdDto,
+  SessionIdFromCookieDto,
+  SignInDto,
+  SignUpDto,
+  UserDto,
+} from '../lib/dto';
+import { Crypt } from '../lib/helpers';
 
 type AsyncFunction<T> = () => Promise<T>;
 
 @Injectable()
-export class UserService {
+export class SessionAuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Session.name) private sessionModel: Model<Session>,
@@ -29,7 +30,7 @@ export class UserService {
 
   private async handleAsyncOperation<T>(
     operation: AsyncFunction<T>,
-  ): Promise<T | MicroserviceResponseStatus> {
+  ): Promise<T | IMicroserviceResponseStatus> {
     try {
       return await operation();
     } catch (error) {
@@ -41,9 +42,11 @@ export class UserService {
     }
   }
 
-  async signin(data: SignInDto): Promise<UserDto | MicroserviceResponseStatus> {
+  async signin(
+    data: SignInDto,
+  ): Promise<UserDto | IMicroserviceResponseStatus> {
     return await this.handleAsyncOperation<
-      MicroserviceResponseStatus | UserDto
+      IMicroserviceResponseStatus | UserDto
     >(async () => {
       const user = await this.userModel.findOne({
         email: data.email,
@@ -81,9 +84,11 @@ export class UserService {
     });
   }
 
-  async signup(data: SignUpDto): Promise<UserDto | MicroserviceResponseStatus> {
+  async signup(
+    data: SignUpDto,
+  ): Promise<UserDto | IMicroserviceResponseStatus> {
     return await this.handleAsyncOperation<
-      MicroserviceResponseStatus | UserDto
+      IMicroserviceResponseStatus | UserDto
     >(async () => {
       {
         const hashedPassword = Crypt.hashPassword(data.password);
@@ -137,7 +142,7 @@ export class UserService {
 
   async me(
     data: SessionIdFromCookieDto,
-  ): Promise<MicroserviceResponseStatus | UserDto> {
+  ): Promise<IMicroserviceResponseStatus | UserDto> {
     return await this.handleAsyncOperation(async () => {
       const session = await this.sessionModel.findOne({
         session_id: data.session_id_from_cookie,
@@ -171,7 +176,7 @@ export class UserService {
 
   async refresh(
     data: SessionIdFromCookieDto,
-  ): Promise<MicroserviceResponseStatus | SessionIdDto> {
+  ): Promise<IMicroserviceResponseStatus | SessionIdDto> {
     return await this.handleAsyncOperation(async () => {
       const session = await this.sessionModel.findOne({
         session_id: data.session_id_from_cookie,
@@ -197,8 +202,8 @@ export class UserService {
     });
   }
 
-  async auth(data: AuthAndLogoutDto): Promise<MicroserviceResponseStatus> {
-    return await this.handleAsyncOperation<MicroserviceResponseStatus>(
+  async auth(data: AuthAndLogoutDto): Promise<IMicroserviceResponseStatus> {
+    return await this.handleAsyncOperation<IMicroserviceResponseStatus>(
       async () => {
         const session = await this.sessionModel.findOne({
           session_id: data.session_id_from_cookie,
@@ -229,8 +234,8 @@ export class UserService {
     );
   }
 
-  async logout(data: AuthAndLogoutDto): Promise<MicroserviceResponseStatus> {
-    return await this.handleAsyncOperation<MicroserviceResponseStatus>(
+  async logout(data: AuthAndLogoutDto): Promise<IMicroserviceResponseStatus> {
+    return await this.handleAsyncOperation<IMicroserviceResponseStatus>(
       async () => {
         const session = await this.sessionModel.findOne({
           session_id: data.session_id_from_cookie,

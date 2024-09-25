@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { UserService } from './user.service';
-import { UserController } from './user.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../schemas/User.schema';
 import { Session, SessionSchema } from '../schemas/Session.schema';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { SessionAuthController } from './session-auth.controller';
+import { SessionAuthService } from './session-auth.service';
 
 @Module({
   imports: [
@@ -14,7 +14,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
       { name: Session.name, schema: SessionSchema },
     ]),
   ],
-  controllers: [UserController],
-  providers: [UserService],
+  controllers: [SessionAuthController],
+  providers: [SessionAuthService],
 })
-export class UserModule {}
+export class SessionAuthModule {}

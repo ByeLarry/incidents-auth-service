@@ -1,24 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserController } from '../user/user.controller';
-import { UserService } from '../user/user.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from '../schemas/User.schema';
-import { Session, SessionSchema } from '../schemas/Session.schema';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as mongoose from 'mongoose';
-import { SignUpDto } from '../user/dto/signup.dto';
-import { SignInDto } from '../user/dto/signin.dto';
-import { SessionIdFromCookieDto } from '../user/dto/sessionIdFromCookie.dto';
-import { AuthAndLogoutDto } from '../user/dto/authAndLogout.dto';
-import { HttpStatusExtends } from '../utils/extendsHttpStatus.enum';
-import { UserDto } from '../user/dto/user.dto';
 import { ConfigModule } from '@nestjs/config';
-import { MicroserviceResponseStatusFabric } from '../utils/microserviceResponseStatusFabric.util';
+import { SessionAuthService } from './session-auth/session-auth.service';
+import { SessionAuthController } from './session-auth/session-auth.controller';
+import { User, UserSchema } from './schemas/User.schema';
+import { Session, SessionSchema } from './schemas/Session.schema';
+import { SignInDto } from './libs/dto/signin.dto';
+import { SignUpDto } from './libs/dto/signup.dto';
+import { SessionIdFromCookieDto } from './libs/dto/session-id-from-cookie.dto';
+import { UserDto } from './libs/dto/user.dto';
+import { HttpStatusExtends } from './libs/enums/extends-http-status.enum';
+import { MicroserviceResponseStatusFabric } from './libs/utils/microservice-response-status-fabric.util';
+import { AuthAndLogoutDto } from './libs/dto/auth-and-logout.dto';
 
 describe('UserController Integration Tests', () => {
-  let controller: UserController;
-  let service: UserService;
+  let controller: SessionAuthController;
+  let service: SessionAuthService;
   let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {
@@ -49,12 +49,12 @@ describe('UserController Integration Tests', () => {
           },
         }),
       ],
-      controllers: [UserController],
-      providers: [UserService],
+      controllers: [SessionAuthController],
+      providers: [SessionAuthService],
     }).compile();
 
-    controller = module.get<UserController>(UserController);
-    service = module.get<UserService>(UserService);
+    controller = module.get<SessionAuthController>(SessionAuthController);
+    service = module.get<SessionAuthService>(SessionAuthService);
   });
 
   afterAll(async () => {
