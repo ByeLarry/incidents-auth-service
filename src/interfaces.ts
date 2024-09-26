@@ -1,4 +1,5 @@
 import { HttpStatusExtends } from './libs/enums';
+import { Token } from './schemas';
 
 export interface IMicroserviceResponseStatus {
   status: HttpStatusExtends;
@@ -7,5 +8,11 @@ export interface IMicroserviceResponseStatus {
 
 export interface ITokens {
   accessToken: string;
-  refreshToken: string;
+  refreshToken: Token;
+}
+
+export interface IJwtPayload {
+  id: string;
+  email: string;
+  roles: string[];
 }

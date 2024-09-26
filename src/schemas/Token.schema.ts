@@ -1,19 +1,21 @@
 import { Prop, SchemaFactory, Schema } from '@nestjs/mongoose';
-import { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
-import { User } from './User.schema';
+import mongoose, { HydratedDocument, Schema as MongooseSchema } from 'mongoose';
 
 export type TokenDocument = HydratedDocument<Token>;
 
 @Schema({ collection: 'tokens' })
 export class Token {
   @Prop({ required: true })
-  token: string;
+  value: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  userId: User;
+  user: mongoose.Schema.Types.ObjectId;
 
   @Prop({ required: true })
   exp: Date;
+
+  @Prop({ required: true, type: String })
+  userAgent: string;
 }
 
 export const TokenSchema = SchemaFactory.createForClass(Token);

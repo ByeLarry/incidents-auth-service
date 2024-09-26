@@ -14,4 +14,5 @@ export enum HttpStatusExtends {
   CREATED = HttpStatus.CREATED,
   UNPROCESSABLE_ENTITY = HttpStatus.UNPROCESSABLE_ENTITY,
   NO_CONTENT = HttpStatus.NO_CONTENT,
+  REQUEST_TIMEOUT = HttpStatus.REQUEST_TIMEOUT,
 }
