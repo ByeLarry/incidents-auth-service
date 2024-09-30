@@ -1,10 +1,4 @@
-import { HttpStatusExtends } from './libs/enums';
 import { Token } from './schemas';
-
-export interface IMicroserviceResponseStatus {
-  status: HttpStatusExtends;
-  message?: string;
-}
 
 export interface ITokens {
   accessToken: string;
@@ -16,3 +10,4 @@ export interface IJwtPayload {
   email: string;
   roles: string[];
 }
+

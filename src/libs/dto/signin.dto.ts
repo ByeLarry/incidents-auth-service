@@ -10,4 +10,7 @@ export class SignInDto {
   @IsNotEmpty()
   @Length(8, 100)
   password: string;
+
+  @IsString()
+  userAgent: string;
 }

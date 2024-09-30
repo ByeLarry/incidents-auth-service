@@ -1,7 +1,7 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class SessionIdDto {
-  @IsString()
+export class AccessTokenDto {
   @IsNotEmpty()
-  session_id: string;
+  @IsString()
+  value: string;
 }

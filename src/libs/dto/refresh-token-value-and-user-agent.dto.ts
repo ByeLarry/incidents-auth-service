@@ -1,11 +1,11 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class AuthAndLogoutDto {
+export class RefreshTokenValueAndUserAgentDto {
   @IsString()
   @IsNotEmpty()
-  session_id_from_cookie: string;
+  value: string;
 
   @IsString()
   @IsNotEmpty()
-  csrf_token: string;
+  userAgent: string;
 }

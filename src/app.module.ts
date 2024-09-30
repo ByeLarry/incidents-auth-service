@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { SessionAuthModule } from './session-auth/session-auth.module';
 import { mailerOptionsFactory } from './libs/utils';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -11,7 +11,7 @@ import { mailerOptionsFactory } from './libs/utils';
       isGlobal: true,
     }),
     MongooseModule.forRoot(`${process.env.MONGO_CONNECTION_STRING}`),
-    SessionAuthModule,
+    AuthModule,
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

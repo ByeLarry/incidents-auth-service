@@ -1,16 +1,42 @@
-import { ITokens } from '../../interfaces';
-import { RolesEnum } from '../enums';
-import { AuthProvidersEnum } from '../enums/auth-providers.enum';
+import {
+  IsBoolean,
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Length,
+} from 'class-validator';
+import { RolesEnum } from '../../libs/enums';
+import { AuthProvidersEnum } from '../../libs/enums/auth-providers.enum';
 
 export class UserDto {
+  @IsString()
+  @IsNotEmpty()
+  @Length(3, 100)
   name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Length(3, 100)
   surname: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsEmail()
+  @Length(3, 100)
   email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @Length(0, 100)
   _id: string;
+
+  @IsBoolean()
+  @IsNotEmpty()
   activated: boolean;
-  csrf_token?: string;
-  session_id?: string;
-  tokens?: ITokens;
-  roles?: RolesEnum[];
-  provider?: AuthProvidersEnum[];
+
+  @IsNotEmpty()
+  roles: RolesEnum[];
+
+  @IsNotEmpty()
+  provider: AuthProvidersEnum;
 }

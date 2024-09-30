@@ -1,78 +1,202 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { compareSync } from 'bcrypt';
 import { add } from 'date-fns';
 import { v4 } from 'uuid';
-import { UserService } from '../user/user.service';
-import { IMicroserviceResponseStatus, ITokens } from '../interfaces';
+import { IJwtPayload, ITokens } from '../interfaces';
 import { Token, User } from '../schemas';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { SignInDto, SignUpDto } from '../libs/dto';
-import { AuthProvidersEnum, HttpStatusExtends } from '../libs/enums';
-import { MicroserviceResponseStatusFabric } from '../libs/utils';
+import { MicroserviceResponseStatusFabric, NO_USER_AGENT } from '../libs/utils';
+import {
+  MicroserviceResponseStatus,
+  RefreshTokenValueAndUserAgentDto,
+  SignInDto,
+  SignUpDto,
+  UserDto,
+} from '../libs/dto';
+import { UserAndTokensDto } from '../libs/dto/user-and-tokens.dto';
+import { genSaltSync, hashSync } from 'bcrypt';
+
+type AsyncFunction<T> = () => Promise<T>;
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userService: UserService,
     private readonly jwtService: JwtService,
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Token.name) private tokenModel: Model<Token>,
   ) {}
 
-  async refreshTokens(
-    refreshTokenValue: string,
-    agent: string,
-  ): Promise<ITokens | IMicroserviceResponseStatus> {
-    const token = await this.tokenModel.findOne({ value: refreshTokenValue });
-    if (!token || new Date(token.exp) < new Date()) {
-      return MicroserviceResponseStatusFabric.create(
-        HttpStatusExtends.UNAUTHORIZED,
+  private async handleAsyncOperation<T>(
+    operation: AsyncFunction<T>,
+  ): Promise<T | MicroserviceResponseStatus> {
+    try {
+      return await operation();
+    } catch (error) {
+      const res = MicroserviceResponseStatusFabric.create(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        error,
       );
+      return res;
     }
-
-    await token.deleteOne();
-    const user = await this.userService.findUserByObjectId(token.user);
-
-    if (!user) {
-      return MicroserviceResponseStatusFabric.create(
-        HttpStatusExtends.UNAUTHORIZED,
-      );
-    }
-
-    return this.generateTokens(user, agent);
   }
 
-  async register(dto: SignUpDto): Promise<IMicroserviceResponseStatus> {
-    const existingUser: User = await this.userService.findOne(dto.email);
-    if (existingUser) {
-      return MicroserviceResponseStatusFabric.create(
-        HttpStatusExtends.CONFLICT,
-      );
-    }
+  public async signup(data: SignUpDto) {
+    return await this.handleAsyncOperation(async () => {
+      const hashedPassword = hashSync(data.password, genSaltSync(10));
 
-    return this.userService.save(dto).catch((err) => {
-      console.error(err);
-      return null;
+      const existingUser = await this.userModel.findOne({
+        email: data.email,
+      });
+      if (existingUser) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+      }
+      const user = new this.userModel({
+        name: data.name,
+        surname: data.surname,
+        email: data.email,
+        password: hashedPassword,
+      });
+      const userSendDto: UserDto = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        _id: user._id.toString(),
+        activated: user.activated,
+        roles: user.roles,
+        provider: user.provider,
+      };
+      const tokens = await this.generateTokens(user, data.userAgent);
+      if (tokens instanceof MicroserviceResponseStatus) {
+        return tokens;
+      }
+      const response: UserAndTokensDto = {
+        user: userSendDto,
+        tokens,
+      };
+      await user.save();
+      return response;
     });
   }
 
-  async login(
-    dto: SignInDto,
-    agent: string,
-  ): Promise<ITokens | IMicroserviceResponseStatus> {
-    const user: User = await this.userService.findOne(dto.email);
-    if (!user || !compareSync(dto.password, user.password)) {
-      return MicroserviceResponseStatusFabric.create(
-        HttpStatusExtends.UNAUTHORIZED,
-      );
-    }
-
-    return this.generateTokens(user, agent);
+  public async signin(data: SignInDto) {
+    return await this.handleAsyncOperation(async () => {
+      const user = await this.userModel.findOne({ email: data.email });
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+      }
+      const isMatch = hashSync(data.password, genSaltSync(10));
+      if (!isMatch) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      const userSendDto: UserDto = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        _id: user._id.toString(),
+        activated: user.activated,
+        roles: user.roles,
+        provider: user.provider,
+      };
+      const tokens = await this.generateTokens(user, data.userAgent);
+      if (tokens instanceof MicroserviceResponseStatus) {
+        return tokens;
+      }
+      const response: UserAndTokensDto = {
+        user: userSendDto,
+        tokens,
+      };
+      return response;
+    });
   }
 
-  private async generateTokens(user: User, agent: string): Promise<ITokens> {
+  public async me(data: RefreshTokenValueAndUserAgentDto) {
+    return await this.handleAsyncOperation(async () => {
+      const token = await this.tokenModel.findOne({
+        value: data.value,
+        userAgent: data.userAgent || NO_USER_AGENT,
+      });
+      if (!token) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      const user = await this.userModel.findOne({
+        id: token.userId,
+      });
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      const userSendDto: UserDto = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        _id: user._id.toString(),
+        activated: user.activated,
+        roles: user.roles,
+        provider: user.provider,
+      };
+      return userSendDto;
+    });
+  }
+
+  async refreshTokens(
+    refreshTokenValue: string,
+    agent: string,
+  ): Promise<ITokens | MicroserviceResponseStatus> {
+    return await this.handleAsyncOperation(async () => {
+      const token = await this.tokenModel.findOne({ value: refreshTokenValue });
+      if (!token || new Date(token.exp) < new Date()) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+
+      await token.deleteOne();
+      const user = await this.userModel.findOne({ id: token.userId });
+
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+
+      return this.generateTokens(user, agent);
+    });
+  }
+
+  public async logout(refreshTokenValue: string) {
+    return await this.handleAsyncOperation(async () => {
+      const token = await this.tokenModel.findOne({ value: refreshTokenValue });
+      if (!token) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      await token.deleteOne();
+      return MicroserviceResponseStatusFabric.create(HttpStatus.NO_CONTENT);
+    });
+  }
+
+  public async auth(
+    accessTokenValue: string,
+  ): Promise<MicroserviceResponseStatus> {
+    try {
+      const payload = this.jwtService.verify<IJwtPayload>(accessTokenValue);
+      const user = await this.userModel.findOne({ id: payload.id });
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+      }
+      return MicroserviceResponseStatusFabric.create(HttpStatus.NO_CONTENT);
+    } catch (error) {
+      if (error.name === 'JsonWebTokenError') {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      if (error.name === 'TokenExpiredError') {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      return MicroserviceResponseStatusFabric.create(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private async generateTokens(
+    user: User,
+    agent: string,
+  ): Promise<ITokens | MicroserviceResponseStatus> {
     const accessToken =
       'Bearer ' +
       this.jwtService.sign({
@@ -80,51 +204,35 @@ export class AuthService {
         email: user.email,
         roles: user.roles,
       });
-    const refreshToken = await this.getRefreshToken(user.id, agent);
+    const refreshToken = await this.getRefreshToken(user, agent);
+    if (refreshToken instanceof MicroserviceResponseStatus) {
+      return refreshToken;
+    }
     return { accessToken, refreshToken };
   }
 
-  private async getRefreshToken(userId: string, agent: string): Promise<Token> {
-    const _token = await this.tokenModel.findOne({
-      user: userId,
-      userAgent: agent,
-    });
-
-    const tokenValue = _token?.value ?? null;
-
-    return this.tokenModel.findOneAndUpdate(
-      { value: tokenValue },
-      {
-        value: v4(),
-        exp: add(new Date(), { months: 1 }),
-      },
-      { new: true, upsert: true },
-    );
-  }
-
-  deleteRefreshToken(value: string) {
-    return this.tokenModel.findOneAndDelete({ value });
-  }
-
-  async providerAuth(
-    email: string,
+  private async getRefreshToken(
+    user: User,
     agent: string,
-    provider: AuthProvidersEnum,
-  ) {
-    const userExists = await this.userService.findOne(email);
-    let user: User;
-
-    if (userExists) {
-      user = userExists;
-    } else {
-      user = await this.userService.save({ email, provider });
-      if (!user) {
-        return MicroserviceResponseStatusFabric.create(
-          HttpStatusExtends.BAD_REQUEST,
-        );
-      }
-    }
-
-    return this.generateTokens(user, agent);
+  ): Promise<Token | MicroserviceResponseStatus> {
+    return await this.handleAsyncOperation(async () => {
+      const _token = await this.tokenModel.findOne({
+        user,
+        userAgent: agent || NO_USER_AGENT,
+      });
+      const tokenValue = _token?.value ?? null;
+      const token = await this.tokenModel.findOneAndUpdate(
+        { value: tokenValue },
+        {
+          userId: user.id,
+          value: v4(),
+          exp: add(new Date(), { months: 1 }),
+          userAgent: agent || NO_USER_AGENT,
+        },
+        { new: true, upsert: true },
+      );
+      token.save();
+      return token;
+    });
   }
 }
