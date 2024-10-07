@@ -29,12 +29,13 @@ docker-compose up -d
 _Диаграммы можно сохранять и редактировать в ***[draw.io](https://app.diagrams.net/)***_
 
 - ### Диаграмма классов (связь сущностей в БД)
-  ![Диаграмма классов для сервиса авторизации](https://github.com/ByeLarry/incidents-auth-service/assets/120035099/01bab462-3101-43cd-bbef-24db54817d21)
+  ![Диаграмма классов для сервиса авторизации](https://github.com/user-attachments/assets/b8fbcd32-c2e6-468a-989f-5ecf3078dac0)
 
 ## Ссылки
 
 - #### Клиентская часть *https://github.com/ByeLarry/incidents-frontend*
 - #### API-шлюз:  *https://github.com/ByeLarry/incidents-gateway*
 - #### Сервис марок (инцидентов): *https://github.com/ByeLarry/indcidents-marks-service*
+- #### Клинтская часть (админ) *https://github.com/ByeLarry/incidents-admin-frontend.git*
 - #### Демонастрация функционала версии 0.1.0: *https://youtu.be/H0-Qg97rvBM*
 
