@@ -54,14 +54,6 @@ export class AuthController {
     return await this.authService.logout(dto.value);
   }
 
-  /**
-   *@deprecated
-   */
-  @MessagePattern(MsgAuthEnum.AUTH)
-  async auth(@Payload() dto: AccessTokenDto) {
-    return await this.authService.auth(dto.value);
-  }
-
   @MessagePattern(MsgAuthEnum.JWT_AUTH)
   async jwtAuth(@Payload() dto: JwtAuthDto) {
     return await this.authService.jwtAuth(dto);

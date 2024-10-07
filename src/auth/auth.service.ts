@@ -160,20 +160,6 @@ export class AuthService {
     });
   }
 
-  /**
-   * @deprecated
-   */
-  public async auth(accessTokenValue: string) {
-    return await this.handleAsyncOperationWithToken(async () => {
-      const payload = this.jwtService.verify<IJwtPayload>(accessTokenValue);
-      const user = await this.userModel.findOne({ id: payload.id });
-      if (!user) {
-        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
-      }
-      return MicroserviceResponseStatusFabric.create(HttpStatus.NO_CONTENT);
-    });
-  }
-
   public async jwtAuth(data: JwtAuthDto) {
     return this.handleAsyncOperation(async () => {
       const user = await this.userModel.findOne({
