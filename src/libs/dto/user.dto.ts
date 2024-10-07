@@ -28,7 +28,7 @@ export class UserDto {
   @IsString()
   @IsNotEmpty()
   @Length(0, 100)
-  _id: string;
+  id: string;
 
   @IsBoolean()
   @IsNotEmpty()

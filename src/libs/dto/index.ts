@@ -5,3 +5,7 @@ export * from './user.dto';
 export * from './refresh-token-value-and-user-agent.dto';
 export * from './access-token.dto';
 export * from './microservice-response-status.dto';
+export * from './delete-user.dto';
+export * from './user-roles.dto';
+export * from './auth-providers.dto';
+export * from './jwt-auth.dto';

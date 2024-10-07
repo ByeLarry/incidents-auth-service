@@ -1,12 +1,15 @@
 import { Controller, HttpStatus } from '@nestjs/common';
 import {
   AccessTokenDto,
+  AuthProvidersDto,
+  DeleteUserDto,
+  JwtAuthDto,
   RefreshTokenValueAndUserAgentDto,
   SignInDto,
   SignUpDto,
 } from '../libs/dto';
 import { MicroserviceResponseStatusFabric } from '../libs/utils';
-import { MsgAuthEnum } from '../libs/enums';
+import { AuthProvidersEnum, MsgAuthEnum } from '../libs/enums';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
 
@@ -51,8 +54,42 @@ export class AuthController {
     return await this.authService.logout(dto.value);
   }
 
+  /**
+   *@deprecated
+   */
   @MessagePattern(MsgAuthEnum.AUTH)
   async auth(@Payload() dto: AccessTokenDto) {
     return await this.authService.auth(dto.value);
+  }
+
+  @MessagePattern(MsgAuthEnum.JWT_AUTH)
+  async jwtAuth(@Payload() dto: JwtAuthDto) {
+    return await this.authService.jwtAuth(dto);
+  }
+
+  @MessagePattern(MsgAuthEnum.DELETE)
+  async deleteUser(@Payload() dto: DeleteUserDto) {
+    return await this.authService.deleteUser(dto);
+  }
+
+  @MessagePattern(MsgAuthEnum.USER_ROLES)
+  async userRoles(@Payload() dto: AccessTokenDto) {
+    return await this.authService.userRoles(dto.value);
+  }
+
+  @MessagePattern(MsgAuthEnum.GOOGLE_AUTH)
+  async googleAuth(@Payload() dto: AuthProvidersDto) {
+    return await this.authService.authByProviders(
+      dto,
+      AuthProvidersEnum.GOOGLE,
+    );
+  }
+
+  @MessagePattern(MsgAuthEnum.YANDEX_AUTH)
+  async yandexAuth(@Payload() dto: AuthProvidersDto) {
+    return await this.authService.authByProviders(
+      dto,
+      AuthProvidersEnum.YANDEX,
+    );
   }
 }

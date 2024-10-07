@@ -11,22 +11,22 @@ export class User {
   @Prop({ default: () => v4(), unique: true, required: true, type: String })
   id: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, type: String })
   name: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, type: String })
   surname: string;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true, unique: true, type: String })
   email: string;
 
-  @Prop({ required: true })
-  password: string;
+  @Prop({ type: String })
+  password?: string;
 
   @Prop({ type: String })
   phone_number?: string;
 
-  @Prop({ default: false })
+  @Prop({ default: false, type: Boolean })
   activated: boolean;
 
   @Prop({ default: false, type: Boolean })
@@ -41,7 +41,6 @@ export class User {
     default: AuthProvidersEnum.LOCAL,
   })
   provider: AuthProvidersEnum;
-
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -8,14 +8,19 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { MicroserviceResponseStatusFabric, NO_USER_AGENT } from '../libs/utils';
 import {
+  AuthProvidersDto,
+  DeleteUserDto,
+  JwtAuthDto,
   MicroserviceResponseStatus,
   RefreshTokenValueAndUserAgentDto,
   SignInDto,
   SignUpDto,
   UserDto,
+  UserRolesDto,
 } from '../libs/dto';
 import { UserAndTokensDto } from '../libs/dto/user-and-tokens.dto';
 import { genSaltSync, hashSync } from 'bcrypt';
+import { AuthProvidersEnum, RolesEnum } from '../libs/enums';
 
 type AsyncFunction<T> = () => Promise<T>;
 
@@ -33,11 +38,28 @@ export class AuthService {
     try {
       return await operation();
     } catch (error) {
-      const res = MicroserviceResponseStatusFabric.create(
+      return MicroserviceResponseStatusFabric.create(
         HttpStatus.INTERNAL_SERVER_ERROR,
         error,
       );
-      return res;
+    }
+  }
+
+  private async handleAsyncOperationWithToken<T>(
+    operation: AsyncFunction<T>,
+  ): Promise<T | MicroserviceResponseStatus> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error.name === 'JsonWebTokenError') {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      if (error.name === 'TokenExpiredError') {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      return MicroserviceResponseStatusFabric.create(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -57,24 +79,8 @@ export class AuthService {
         email: data.email,
         password: hashedPassword,
       });
-      const userSendDto: UserDto = {
-        name: user.name,
-        surname: user.surname,
-        email: user.email,
-        _id: user._id.toString(),
-        activated: user.activated,
-        roles: user.roles,
-        provider: user.provider,
-      };
-      const tokens = await this.generateTokens(user, data.userAgent);
-      if (tokens instanceof MicroserviceResponseStatus) {
-        return tokens;
-      }
-      const response: UserAndTokensDto = {
-        user: userSendDto,
-        tokens,
-      };
       await user.save();
+      const response = await this.createResponse(user, data.userAgent);
       return response;
     });
   }
@@ -85,27 +91,14 @@ export class AuthService {
       if (!user) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
+      if (user.provider !== AuthProvidersEnum.LOCAL) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+      }
       const isMatch = hashSync(data.password, genSaltSync(10));
       if (!isMatch) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
       }
-      const userSendDto: UserDto = {
-        name: user.name,
-        surname: user.surname,
-        email: user.email,
-        _id: user._id.toString(),
-        activated: user.activated,
-        roles: user.roles,
-        provider: user.provider,
-      };
-      const tokens = await this.generateTokens(user, data.userAgent);
-      if (tokens instanceof MicroserviceResponseStatus) {
-        return tokens;
-      }
-      const response: UserAndTokensDto = {
-        user: userSendDto,
-        tokens,
-      };
+      const response = await this.createResponse(user, data.userAgent);
       return response;
     });
   }
@@ -123,13 +116,13 @@ export class AuthService {
         id: token.userId,
       });
       if (!user) {
-        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
       const userSendDto: UserDto = {
         name: user.name,
         surname: user.surname,
         email: user.email,
-        _id: user._id.toString(),
+        id: user.id,
         activated: user.activated,
         roles: user.roles,
         provider: user.provider,
@@ -138,10 +131,7 @@ export class AuthService {
     });
   }
 
-  async refreshTokens(
-    refreshTokenValue: string,
-    agent: string,
-  ): Promise<ITokens | MicroserviceResponseStatus> {
+  async refreshTokens(refreshTokenValue: string, agent: string) {
     return await this.handleAsyncOperation(async () => {
       const token = await this.tokenModel.findOne({ value: refreshTokenValue });
       if (!token || new Date(token.exp) < new Date()) {
@@ -152,7 +142,7 @@ export class AuthService {
       const user = await this.userModel.findOne({ id: token.userId });
 
       if (!user) {
-        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
 
       return this.generateTokens(user, agent);
@@ -170,27 +160,103 @@ export class AuthService {
     });
   }
 
-  public async auth(
-    accessTokenValue: string,
-  ): Promise<MicroserviceResponseStatus> {
-    try {
+  /**
+   * @deprecated
+   */
+  public async auth(accessTokenValue: string) {
+    return await this.handleAsyncOperationWithToken(async () => {
       const payload = this.jwtService.verify<IJwtPayload>(accessTokenValue);
       const user = await this.userModel.findOne({ id: payload.id });
       if (!user) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
       return MicroserviceResponseStatusFabric.create(HttpStatus.NO_CONTENT);
-    } catch (error) {
-      if (error.name === 'JsonWebTokenError') {
-        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+    });
+  }
+
+  public async jwtAuth(data: JwtAuthDto) {
+    return this.handleAsyncOperation(async () => {
+      const user = await this.userModel.findOne({
+        email: data.email,
+        id: data.id,
+        roles: data.roles,
+      });
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
-      if (error.name === 'TokenExpiredError') {
-        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      if (user.isBlocked)
+        return MicroserviceResponseStatusFabric.create(HttpStatus.FORBIDDEN);
+      const response: UserDto = {
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        id: user.id,
+        activated: user.activated,
+        roles: user.roles,
+        provider: user.provider,
+      };
+      return response;
+    });
+  }
+
+  public async deleteUser(dto: DeleteUserDto) {
+    return await this.handleAsyncOperationWithToken(async () => {
+      const user = await this.userModel.findOne({ id: dto.userId });
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
-      return MicroserviceResponseStatusFabric.create(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+      const payload = this.jwtService.verify<IJwtPayload>(dto.accessTokenValue);
+      if (payload.id !== dto.userId && !user.roles.includes(RolesEnum.ADMIN)) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.FORBIDDEN);
+      }
+
+      await this.tokenModel.deleteMany({ userId: user.id });
+      await user.deleteOne();
+      return MicroserviceResponseStatusFabric.create(HttpStatus.NO_CONTENT);
+    });
+  }
+
+  public async userRoles(accessTokenValue: string) {
+    return await this.handleAsyncOperationWithToken(async () => {
+      const payload = this.jwtService.verify<IJwtPayload>(accessTokenValue);
+      const user = await this.userModel.findOne({ id: payload.id });
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+      }
+      const response: UserRolesDto = {
+        roles: user.roles,
+      };
+      return response;
+    });
+  }
+
+  public async authByProviders(
+    data: AuthProvidersDto,
+    provider: AuthProvidersEnum,
+  ) {
+    return await this.handleAsyncOperation(async () => {
+      const userExist = await this.userModel.findOne({
+        email: data.email,
+      });
+      if (userExist) {
+        if (
+          userExist.provider === AuthProvidersEnum.LOCAL ||
+          userExist.provider !== provider
+        ) {
+          return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+        }
+        return this.createResponse(userExist, data.userAgent);
+      }
+      const user = await this.userModel.create({
+        name: data.name,
+        surname: data.surname,
+        email: data.email,
+        provider,
+      });
+      if (!user)
+        return MicroserviceResponseStatusFabric.create(HttpStatus.BAD_REQUEST);
+      return this.createResponse(user, data.userAgent);
+    });
   }
 
   private async generateTokens(
@@ -216,13 +282,8 @@ export class AuthService {
     agent: string,
   ): Promise<Token | MicroserviceResponseStatus> {
     return await this.handleAsyncOperation(async () => {
-      const _token = await this.tokenModel.findOne({
-        user,
-        userAgent: agent || NO_USER_AGENT,
-      });
-      const tokenValue = _token?.value ?? null;
       const token = await this.tokenModel.findOneAndUpdate(
-        { value: tokenValue },
+        { userId: user.id, userAgent: agent || NO_USER_AGENT },
         {
           userId: user.id,
           value: v4(),
@@ -231,8 +292,32 @@ export class AuthService {
         },
         { new: true, upsert: true },
       );
-      token.save();
+
       return token;
     });
+  }
+
+  private async createResponse(
+    user: User,
+    userAgent: string,
+  ): Promise<MicroserviceResponseStatus | UserAndTokensDto> {
+    const userSendDto: UserDto = {
+      name: user.name,
+      surname: user.surname,
+      email: user.email,
+      id: user.id,
+      activated: user.activated,
+      roles: user.roles,
+      provider: user.provider,
+    };
+    const tokensOrError = await this.generateTokens(user, userAgent);
+    if (tokensOrError instanceof MicroserviceResponseStatus) {
+      return tokensOrError;
+    }
+    const response: UserAndTokensDto = {
+      user: userSendDto,
+      tokens: tokensOrError,
+    };
+    return response;
   }
 }
