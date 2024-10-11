@@ -1,6 +1,7 @@
 import { Controller, HttpStatus } from '@nestjs/common';
 import {
   AccessTokenDto,
+  AdminLoginDto,
   AuthProvidersDto,
   DeleteUserDto,
   JwtAuthDto,
@@ -83,5 +84,10 @@ export class AuthController {
       dto,
       AuthProvidersEnum.YANDEX,
     );
+  }
+
+  @MessagePattern(MsgAuthEnum.ADMIN_LOGIN)
+  async adminLogin(@Payload() dto: AdminLoginDto) {
+    return await this.authService.adminLogin(dto)
   }
 }

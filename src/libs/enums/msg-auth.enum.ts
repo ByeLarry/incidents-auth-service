@@ -10,4 +10,5 @@ export enum MsgAuthEnum {
   GOOGLE_AUTH = 'google-auth',
   JWT_AUTH = 'jwt-auth',
   YANDEX_AUTH = 'yandex-auth',
+  ADMIN_LOGIN = 'admin-login',
 }

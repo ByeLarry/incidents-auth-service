@@ -8,6 +8,7 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { MicroserviceResponseStatusFabric, NO_USER_AGENT } from '../libs/utils';
 import {
+  AdminLoginDto,
   AuthProvidersDto,
   DeleteUserDto,
   JwtAuthDto,
@@ -242,6 +243,24 @@ export class AuthService {
       if (!user)
         return MicroserviceResponseStatusFabric.create(HttpStatus.BAD_REQUEST);
       return this.createResponse(user, data.userAgent);
+    });
+  }
+
+  async adminLogin(data: AdminLoginDto) {
+    return await this.handleAsyncOperation(async () => {
+      const user = await this.userModel.findOne({
+        name: data.name,
+        roles: { $in: [RolesEnum.ADMIN] },
+      });
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+      }
+      const isMatch = hashSync(data.password, genSaltSync(10));
+      if (!isMatch) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+      }
+      const response = await this.createResponse(user, data.userAgent);
+      return response;
     });
   }
 

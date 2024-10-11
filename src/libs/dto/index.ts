@@ -9,3 +9,4 @@ export * from './delete-user.dto';
 export * from './user-roles.dto';
 export * from './auth-providers.dto';
 export * from './jwt-auth.dto';
+export * from './admin-login.dto';
