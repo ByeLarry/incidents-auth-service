@@ -2,11 +2,15 @@ import {
   IsBoolean,
   IsEmail,
   IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsPhoneNumber,
   IsString,
   Length,
 } from 'class-validator';
 import { RolesEnum } from '../../libs/enums';
 import { AuthProvidersEnum } from '../../libs/enums/auth-providers.enum';
+import { Transform } from 'class-transformer';
 
 export class UserDto {
   @IsString()
@@ -39,4 +43,14 @@ export class UserDto {
 
   @IsNotEmpty()
   provider: AuthProvidersEnum;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(({ value }) => Number(value))
+  tokensCount?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsPhoneNumber('RU')
+  phone_number?: string;
 }

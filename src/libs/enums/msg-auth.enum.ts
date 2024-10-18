@@ -11,4 +11,8 @@ export enum MsgAuthEnum {
   JWT_AUTH = 'jwt-auth',
   YANDEX_AUTH = 'yandex-auth',
   ADMIN_LOGIN = 'admin-login',
+  GET_ALL_USERS = 'get-all-users',
+  BLOCK_USER = 'block-user',
+  UNBLOCK_USER = 'unblock-user',
+  UPDATE_ADMIN = 'update-admin',
 }

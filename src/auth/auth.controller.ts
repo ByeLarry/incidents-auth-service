@@ -8,6 +8,8 @@ import {
   RefreshTokenValueAndUserAgentDto,
   SignInDto,
   SignUpDto,
+  UpdateAdminDto,
+  UserIdDto,
 } from '../libs/dto';
 import { MicroserviceResponseStatusFabric } from '../libs/utils';
 import { AuthProvidersEnum, MsgAuthEnum } from '../libs/enums';
@@ -88,6 +90,26 @@ export class AuthController {
 
   @MessagePattern(MsgAuthEnum.ADMIN_LOGIN)
   async adminLogin(@Payload() dto: AdminLoginDto) {
-    return await this.authService.adminLogin(dto)
+    return await this.authService.adminLogin(dto);
+  }
+
+  @MessagePattern(MsgAuthEnum.GET_ALL_USERS)
+  async getAllUsers() {
+    return await this.authService.getAllUsers();
+  }
+
+  @MessagePattern(MsgAuthEnum.BLOCK_USER)
+  async blockUser(@Payload() dto: UserIdDto) {
+    return await this.authService.blockUser(dto);
+  }
+
+  @MessagePattern(MsgAuthEnum.UNBLOCK_USER)
+  async unblockUser(@Payload() dto: UserIdDto) {
+    return await this.authService.unblockUser(dto);
+  }
+
+  @MessagePattern(MsgAuthEnum.UPDATE_ADMIN)
+  async updateAdmin(@Payload() dto: UpdateAdminDto) {
+    return await this.authService.updateAdmin(dto);
   }
 }

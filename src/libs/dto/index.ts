@@ -10,3 +10,5 @@ export * from './user-roles.dto';
 export * from './auth-providers.dto';
 export * from './jwt-auth.dto';
 export * from './admin-login.dto';
+export * from './user-id.dto';
+export * from './update-admin.dto';
