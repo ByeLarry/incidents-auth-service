@@ -8,11 +8,14 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { MicroserviceResponseStatusFabric, NO_USER_AGENT } from '../libs/utils';
 import {
+  AddAdminDto,
   AdminLoginDto,
   AuthProvidersDto,
+  CreateUserDto,
   DeleteUserDto,
   JwtAuthDto,
   MicroserviceResponseStatus,
+  PaginationDto,
   RefreshTokenValueAndUserAgentDto,
   SignInDto,
   SignUpDto,
@@ -20,6 +23,8 @@ import {
   UserDto,
   UserIdDto,
   UserRolesDto,
+  UsersStatsDto,
+  UsersViaPaginationDto,
 } from '../libs/dto';
 import { UserAndTokensDto } from '../libs/dto/user-and-tokens.dto';
 import { genSaltSync, hashSync } from 'bcrypt';
@@ -55,6 +60,7 @@ export class AuthService {
     try {
       return await operation();
     } catch (error) {
+      console.log(error);
       if (error.name === 'JsonWebTokenError') {
         return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
       }
@@ -185,18 +191,22 @@ export class AuthService {
     return await this.handleAsyncOperationWithToken(async () => {
       const user = await this.userModel
         .findOne({ id: dto.userId })
-        .select('-password -_id -__v');
-      if (!user) {
+        .select('-password -__v');
+
+      if (!user)
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
-      }
+
       const payload = this.jwtService.verify<IJwtPayload>(dto.accessTokenValue);
-      if (payload.id !== dto.userId && !user.roles.includes(RolesEnum.ADMIN)) {
+      if (payload.id !== dto.userId && !payload.roles.includes(RolesEnum.ADMIN))
         return MicroserviceResponseStatusFabric.create(HttpStatus.FORBIDDEN);
-      }
+
+      if (user.roles.includes(RolesEnum.ADMIN))
+        return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
 
       await this.tokenModel.deleteMany({ userId: user.id });
+      const result = this.createUserDto(user);
       await user.deleteOne();
-      return user.toObject();
+      return result;
     });
   }
 
@@ -204,9 +214,10 @@ export class AuthService {
     return await this.handleAsyncOperationWithToken(async () => {
       const payload = this.jwtService.verify<IJwtPayload>(accessTokenValue);
       const user = await this.userModel.findOne({ id: payload.id });
-      if (!user) {
+
+      if (!user)
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
-      }
+
       const response: UserRolesDto = {
         roles: user.roles,
       };
@@ -231,9 +242,9 @@ export class AuthService {
         if (
           userExist.provider === AuthProvidersEnum.LOCAL ||
           userExist.provider !== provider
-        ) {
+        )
           return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
-        }
+
         return this.createResponse(userExist, data.userAgent);
       }
       const user = await this.userModel.create({
@@ -333,9 +344,14 @@ export class AuthService {
     };
   }
 
-  async getAllUsers() {
+  async getAllUsers(dto: PaginationDto) {
     return await this.handleAsyncOperation(async () => {
-      const users = await this.userModel.find().select('-password -_id -__v');
+      const skip = (dto.page - 1) * dto.limit;
+      const total = await this.userModel.countDocuments();
+
+      const users = await this.userModel
+        .find({}, {}, { skip, limit: dto.limit, sort: { createdAt: 1 } })
+        .select('-password -_id -__v');
 
       const usersWithTokenCount = await Promise.all(
         users.map(async (user) => {
@@ -350,7 +366,15 @@ export class AuthService {
           return userObj;
         }),
       );
-      return usersWithTokenCount;
+
+      const response: UsersViaPaginationDto = {
+        total,
+        page: Number(dto.page),
+        limit: Number(dto.limit),
+        users: usersWithTokenCount,
+      };
+
+      return response;
     });
   }
 
@@ -413,6 +437,71 @@ export class AuthService {
       await user.save();
 
       return this.createResponse(user, dto.userAgent);
+    });
+  }
+
+  async createUserByAdmin(data: CreateUserDto) {
+    return await this.handleAsyncOperation(async () => {
+      const hashedPassword = hashSync(data.password, genSaltSync(10));
+
+      const existingUser = await this.userModel.findOne({
+        email: data.email.trim(),
+      });
+      if (existingUser) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+      }
+      const user = new this.userModel({
+        name: data.name.trim(),
+        surname: data.surname.trim(),
+        email: data.email.trim(),
+        password: hashedPassword,
+      });
+      await user.save();
+      const response = this.createUserDto(user);
+      return response;
+    });
+  }
+
+  async addAdminRoleToUser(data: AddAdminDto) {
+    return await this.handleAsyncOperation(async () => {
+      const user = await this.userModel
+        .findOne({ id: data.id })
+        .select('-password');
+
+      if (!user)
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+
+      if (user.roles.includes(RolesEnum.ADMIN))
+        return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+
+      user.roles.push(RolesEnum.ADMIN);
+      await user.save();
+      return this.createUserDto(user);
+    });
+  }
+
+  async getStats() {
+    return await this.handleAsyncOperation(async () => {
+      const total = await this.userModel.countDocuments();
+      const blocked = await this.userModel.countDocuments({
+        isBlocked: true,
+      });
+      const admins = await this.userModel.countDocuments({
+        roles: RolesEnum.ADMIN,
+      });
+      const activeSessions = await this.tokenModel.countDocuments();
+      const activated = await this.userModel.countDocuments({
+        activated: true,
+      });
+      const response: UsersStatsDto = {
+        total,
+        blocked,
+        admins,
+        activeSessions,
+        activated,
+      };
+
+      return response;
     });
   }
 }

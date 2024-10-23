@@ -15,4 +15,7 @@ export enum MsgAuthEnum {
   BLOCK_USER = 'block-user',
   UNBLOCK_USER = 'unblock-user',
   UPDATE_ADMIN = 'update-admin',
+  CREATE_USER_BY_ADMIN = 'create-user-by-admin',
+  ADD_ADMIN_ROLE_TO_USER = 'add-admin-role-to-user',
+  USERS_STATS = 'users-stats',
 }

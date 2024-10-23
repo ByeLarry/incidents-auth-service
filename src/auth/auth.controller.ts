@@ -1,10 +1,13 @@
 import { Controller, HttpStatus } from '@nestjs/common';
 import {
   AccessTokenDto,
+  AddAdminDto,
   AdminLoginDto,
   AuthProvidersDto,
+  CreateUserDto,
   DeleteUserDto,
   JwtAuthDto,
+  PaginationDto,
   RefreshTokenValueAndUserAgentDto,
   SignInDto,
   SignUpDto,
@@ -94,8 +97,8 @@ export class AuthController {
   }
 
   @MessagePattern(MsgAuthEnum.GET_ALL_USERS)
-  async getAllUsers() {
-    return await this.authService.getAllUsers();
+  async getAllUsers(@Payload() dto: PaginationDto) {
+    return await this.authService.getAllUsers(dto);
   }
 
   @MessagePattern(MsgAuthEnum.BLOCK_USER)
@@ -111,5 +114,20 @@ export class AuthController {
   @MessagePattern(MsgAuthEnum.UPDATE_ADMIN)
   async updateAdmin(@Payload() dto: UpdateAdminDto) {
     return await this.authService.updateAdmin(dto);
+  }
+
+  @MessagePattern(MsgAuthEnum.CREATE_USER_BY_ADMIN)
+  async createUserByAdmin(@Payload() dto: CreateUserDto) {
+    return await this.authService.createUserByAdmin(dto);
+  }
+
+  @MessagePattern(MsgAuthEnum.ADD_ADMIN_ROLE_TO_USER)
+  async addAdminRoleToUser(@Payload() dto: AddAdminDto) {
+    return await this.authService.addAdminRoleToUser(dto);
+  }
+
+  @MessagePattern(MsgAuthEnum.USERS_STATS)
+  async getStats() {
+    return await this.authService.getStats();
   }
 }

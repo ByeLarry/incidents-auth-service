@@ -12,3 +12,8 @@ export * from './jwt-auth.dto';
 export * from './admin-login.dto';
 export * from './user-id.dto';
 export * from './update-admin.dto';
+export * from './create-user.dto';
+export * from './add-admin.dto';
+export * from './users-stats.dto';
+export * from './pagination.dto';
+export * from './users-via-pagination.dto';

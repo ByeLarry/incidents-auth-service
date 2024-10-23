@@ -6,7 +6,7 @@ import { v4 } from 'uuid';
 
 export type UserDocument = HydratedDocument<User>;
 
-@Schema({ collection: 'users' })
+@Schema({ collection: 'users', timestamps: true }) 
 export class User {
   @Prop({ default: () => v4(), unique: true, required: true, type: String })
   id: string;
@@ -41,6 +41,7 @@ export class User {
     default: AuthProvidersEnum.LOCAL,
   })
   provider: AuthProvidersEnum;
+
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

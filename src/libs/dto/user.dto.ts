@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsDate,
   IsEmail,
   IsNotEmpty,
   IsNumber,
@@ -53,4 +54,14 @@ export class UserDto {
   @IsString()
   @IsPhoneNumber('RU')
   phone_number?: string;
+
+  @IsOptional()
+  @IsDate()
+  @Transform(({ value }) => new Date(value), { toClassOnly: true })
+  createdAt?: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Transform(({ value }) => new Date(value), { toClassOnly: true })
+  updatedAt?: Date;
 }
