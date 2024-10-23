@@ -322,11 +322,11 @@ export class AuthService {
 
   private createUserDto(data: User): UserDto {
     return {
-      name: data.name.trim(),
-      surname: data.surname.trim(),
-      email: data.email.trim(),
-      id: data.id.trim(),
-      phone_number: data.phone_number.trim(),
+      name: data.name?.trim(),
+      surname: data.surname?.trim(),
+      email: data.email?.trim(),
+      id: data.id?.trim(),
+      phone_number: data.phone_number?.trim(),
       activated: data.activated,
       roles: data.roles,
       provider: data.provider,
