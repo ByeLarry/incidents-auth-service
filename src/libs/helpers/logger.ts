@@ -10,7 +10,7 @@ export class AppLoggerService {
     this.logger = winston.createLogger({
       transports: [
         new DailyRotateFile({
-          filename: 'logs/application-%DATE%.log',
+          filename: 'logs/auth-service-%DATE%.log',
           datePattern: 'YYYY-MM-DD',
           zippedArchive: true,
           maxSize: '20m',
