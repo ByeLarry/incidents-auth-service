@@ -1,4 +1,9 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpStatus,
+  Inject,
+  Injectable,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { add } from 'date-fns';
 import { v4 } from 'uuid';
@@ -6,7 +11,11 @@ import { IJwtPayload, ITokens } from '../interfaces';
 import { Token, User } from '../schemas';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { MicroserviceResponseStatusFabric, NO_USER_AGENT } from '../libs/utils';
+import {
+  MicroserviceResponseStatusFabric,
+  NO_USER_AGENT,
+  SEARCH_SERVICE_TAG,
+} from '../libs/utils';
 import {
   AddAdminDto,
   AdminLoginDto,
@@ -28,16 +37,19 @@ import {
 } from '../libs/dto';
 import { UserAndTokensDto } from '../libs/dto/user-and-tokens.dto';
 import { genSaltSync, hashSync } from 'bcrypt';
-import { AuthProvidersEnum, RolesEnum } from '../libs/enums';
+import { AuthProvidersEnum, MsgSearchEnum, RolesEnum } from '../libs/enums';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 type AsyncFunction<T> = () => Promise<T>;
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnApplicationBootstrap {
   constructor(
     private readonly jwtService: JwtService,
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Token.name) private tokenModel: Model<Token>,
+    @Inject(SEARCH_SERVICE_TAG) private searchClient: ClientProxy,
   ) {}
 
   private async handleAsyncOperation<T>(
@@ -71,6 +83,15 @@ export class AuthService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  async onApplicationBootstrap() {
+    return await this.handleAsyncOperation(async () => {
+      const users = await this.userModel.find().select('-password -_id -__v');
+      firstValueFrom(
+        this.searchClient.send<string>(MsgSearchEnum.SET_USERS, users),
+      );
+    });
   }
 
   public async signup(data: SignUpDto) {
