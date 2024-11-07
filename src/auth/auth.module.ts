@@ -5,10 +5,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Token, TokenSchema, User, UserSchema } from '../schemas';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AppLoggerService } from '../libs/helpers';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, SearchServiceProvide],
+  providers: [AuthService, SearchServiceProvide, AppLoggerService],
   imports: [
     JwtModule.registerAsync(options()),
     MongooseModule.forFeature([

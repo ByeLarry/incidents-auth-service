@@ -10,13 +10,23 @@ export class AppLoggerService {
     this.logger = winston.createLogger({
       transports: [
         new DailyRotateFile({
-          filename: 'logs/auth-service-%DATE%.log',
+          filename: 'logs/marks-service-%DATE%.log',
           datePattern: 'YYYY-MM-DD',
           zippedArchive: true,
           maxSize: '20m',
           maxFiles: '14d',
           level: 'info',
           format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.printf(({ timestamp, level, message }) => {
+              return `[${timestamp}] ${level}: ${message}`;
+            }),
+          ),
+        }),
+        new winston.transports.Console({
+          level: 'info',
+          format: winston.format.combine(
+            winston.format.colorize(),
             winston.format.timestamp(),
             winston.format.printf(({ timestamp, level, message }) => {
               return `[${timestamp}] ${level}: ${message}`;

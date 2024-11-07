@@ -39,6 +39,7 @@ import { UserAndTokensDto } from '../libs/dto/user-and-tokens.dto';
 import { genSaltSync, hashSync } from 'bcrypt';
 import { AuthProvidersEnum, MsgSearchEnum, RolesEnum } from '../libs/enums';
 import { ClientProxy } from '@nestjs/microservices';
+import { AppLoggerService } from '../libs/helpers';
 import { firstValueFrom } from 'rxjs';
 
 type AsyncFunction<T> = () => Promise<T>;
@@ -50,6 +51,7 @@ export class AuthService implements OnApplicationBootstrap {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Token.name) private tokenModel: Model<Token>,
     @Inject(SEARCH_SERVICE_TAG) private searchClient: ClientProxy,
+    private readonly logger: AppLoggerService,
   ) {}
 
   private async handleAsyncOperation<T>(
@@ -88,9 +90,12 @@ export class AuthService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     return await this.handleAsyncOperation(async () => {
       const users = await this.userModel.find().select('-password -_id -__v');
-      firstValueFrom(
+
+      const res = await firstValueFrom(
         this.searchClient.send<string>(MsgSearchEnum.SET_USERS, users),
       );
+
+      this.logger.log(`[${MsgSearchEnum.SET_USERS}] - ${res}`);
     });
   }
 
