@@ -1,9 +1,4 @@
-import {
-  HttpStatus,
-  Inject,
-  Injectable,
-  OnApplicationBootstrap,
-} from '@nestjs/common';
+import { HttpStatus, Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { add } from 'date-fns';
 import { v4 } from 'uuid';
@@ -11,11 +6,7 @@ import { IJwtPayload, ITokens } from '../interfaces';
 import { Token, User } from '../schemas';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import {
-  MicroserviceResponseStatusFabric,
-  NO_USER_AGENT,
-  SEARCH_SERVICE_TAG,
-} from '../libs/utils';
+import { MicroserviceResponseStatusFabric, NO_USER_AGENT } from '../libs/utils';
 import {
   AddAdminDto,
   AdminLoginDto,
@@ -38,9 +29,7 @@ import {
 import { UserAndTokensDto } from '../libs/dto/user-and-tokens.dto';
 import { genSaltSync, hashSync } from 'bcrypt';
 import { AuthProvidersEnum, MsgSearchEnum, RolesEnum } from '../libs/enums';
-import { ClientProxy } from '@nestjs/microservices';
-import { AppLoggerService } from '../libs/helpers';
-import { firstValueFrom } from 'rxjs';
+import { SearchService } from '../libs/services';
 
 type AsyncFunction<T> = () => Promise<T>;
 
@@ -50,8 +39,7 @@ export class AuthService implements OnApplicationBootstrap {
     private readonly jwtService: JwtService,
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Token.name) private tokenModel: Model<Token>,
-    @Inject(SEARCH_SERVICE_TAG) private searchClient: ClientProxy,
-    private readonly logger: AppLoggerService,
+    private readonly searchService: SearchService,
   ) {}
 
   private async handleAsyncOperation<T>(
@@ -91,11 +79,7 @@ export class AuthService implements OnApplicationBootstrap {
     return await this.handleAsyncOperation(async () => {
       const users = await this.userModel.find().select('-password -_id -__v');
 
-      const res = await firstValueFrom(
-        this.searchClient.send<string>(MsgSearchEnum.SET_USERS, users),
-      );
-
-      this.logger.log(`[${MsgSearchEnum.SET_USERS}] - ${res}`);
+      await this.searchService.update(users, MsgSearchEnum.SET_USERS);
     });
   }
 
@@ -115,7 +99,12 @@ export class AuthService implements OnApplicationBootstrap {
         email: data.email.trim(),
         password: hashedPassword,
       });
-      await user.save();
+
+      Promise.all([
+        user.save(),
+        this.searchService.update(user, MsgSearchEnum.SET_USER),
+      ]);
+
       const response = await this.createResponse(user, data.userAgent);
       return response;
     });
@@ -229,9 +218,13 @@ export class AuthService implements OnApplicationBootstrap {
       if (user.roles.includes(RolesEnum.ADMIN))
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
 
-      await this.tokenModel.deleteMany({ userId: user.id });
+      Promise.all([
+        this.tokenModel.deleteMany({ userId: user.id }),
+        user.deleteOne(),
+        this.searchService.update(user, MsgSearchEnum.DELETE_USER),
+      ]);
+
       const result = this.createUserDto(user);
-      await user.deleteOne();
       return result;
     });
   }
@@ -279,8 +272,12 @@ export class AuthService implements OnApplicationBootstrap {
         email: data.email.trim(),
         provider,
       });
+
       if (!user)
         return MicroserviceResponseStatusFabric.create(HttpStatus.BAD_REQUEST);
+
+      await this.searchService.update(user, MsgSearchEnum.SET_USER);
+
       return this.createResponse(user, data.userAgent);
     });
   }
@@ -370,6 +367,7 @@ export class AuthService implements OnApplicationBootstrap {
     };
   }
 
+  
   async getAllUsers(dto: PaginationDto) {
     return await this.handleAsyncOperation(async () => {
       const skip = (dto.page - 1) * dto.limit;
@@ -460,7 +458,10 @@ export class AuthService implements OnApplicationBootstrap {
       user.email = dto.email.trim();
       user.phone_number = dto.phone_number.trim();
 
-      await user.save();
+      Promise.all([
+        user.save(),
+        this.searchService.update(user, MsgSearchEnum.SET_USER),
+      ]);
 
       return this.createResponse(user, dto.userAgent);
     });
@@ -482,7 +483,12 @@ export class AuthService implements OnApplicationBootstrap {
         email: data.email.trim(),
         password: hashedPassword,
       });
-      await user.save();
+
+      Promise.all([
+        user.save(),
+        this.searchService.update(user, MsgSearchEnum.SET_USER),
+      ]);
+
       const response = this.createUserDto(user);
       return response;
     });
@@ -501,7 +507,12 @@ export class AuthService implements OnApplicationBootstrap {
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
 
       user.roles.push(RolesEnum.ADMIN);
-      await user.save();
+
+      Promise.all([
+        user.save(),
+        this.searchService.update(user, MsgSearchEnum.SET_USER),
+      ]);
+
       return this.createUserDto(user);
     });
   }

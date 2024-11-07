@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
-import { AppLoggerService } from '../libs/helpers';
+import { AppLoggerService } from '../libs/helpers/logger';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -17,7 +17,7 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap((data) => {
         this.logger.log(
-          `[${calledHandler}] - returned '${JSON.stringify(data)?.slice(0, 50)}'`,
+          `[${calledHandler}] - returned data length:  ${JSON.stringify(data).length}`,
         );
       }),
       catchError((error) => {
