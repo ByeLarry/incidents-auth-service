@@ -1,3 +1,5 @@
+import { MsgSearchEnum } from "./message-search.enum";
+
 export enum MsgAuthEnum {
   ME = 'me',
   SIGNIN = 'signin',
@@ -18,4 +20,5 @@ export enum MsgAuthEnum {
   CREATE_USER_BY_ADMIN = 'admin.create.user',
   ADD_ADMIN_ROLE_TO_USER = 'admin.add',
   USERS_STATS = 'user.stats',
+  SEARCH_USERS = MsgSearchEnum.SEARCH_USERS
 }

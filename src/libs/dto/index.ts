@@ -17,3 +17,5 @@ export * from './add-admin.dto';
 export * from './users-stats.dto';
 export * from './pagination.dto';
 export * from './users-via-pagination.dto';
+export * from './search.dto';
+export * from './user-search.dto';

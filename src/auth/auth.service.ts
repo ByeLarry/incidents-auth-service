@@ -23,6 +23,7 @@ import {
   UserDto,
   UserIdDto,
   UserRolesDto,
+  UserSearchDto,
   UsersStatsDto,
   UsersViaPaginationDto,
 } from '../libs/dto';
@@ -30,6 +31,7 @@ import { UserAndTokensDto } from '../libs/dto/user-and-tokens.dto';
 import { genSaltSync, hashSync } from 'bcrypt';
 import { AuthProvidersEnum, MsgSearchEnum, RolesEnum } from '../libs/enums';
 import { SearchService } from '../libs/services';
+import { isArray } from 'class-validator';
 
 type AsyncFunction<T> = () => Promise<T>;
 
@@ -78,6 +80,8 @@ export class AuthService implements OnApplicationBootstrap {
   async onApplicationBootstrap() {
     return await this.handleAsyncOperation(async () => {
       const users = await this.userModel.find().select('-password -_id -__v');
+
+      if (isArray(users) && users.length === 0) return;
 
       await this.searchService.update(users, MsgSearchEnum.SET_USERS);
     });
@@ -367,7 +371,6 @@ export class AuthService implements OnApplicationBootstrap {
     };
   }
 
-  
   async getAllUsers(dto: PaginationDto) {
     return await this.handleAsyncOperation(async () => {
       const skip = (dto.page - 1) * dto.limit;
@@ -539,6 +542,29 @@ export class AuthService implements OnApplicationBootstrap {
       };
 
       return response;
+    });
+  }
+
+  async getUsersFromUserSearchDto(data: UserSearchDto[]) {
+    return await this.handleAsyncOperation(async () => {
+      const users = await this.userModel
+        .find({ id: { $in: data.map((user) => user.id) } })
+        .select('-password -_id -__v');
+
+      const usersWithTokenCount = await Promise.all(
+        users.map(async (user) => {
+          const userObj: UserDto = user.toObject();
+
+          const tokensCount = await this.tokenModel.countDocuments({
+            userId: user.id,
+          });
+
+          userObj.tokensCount = tokensCount;
+
+          return userObj;
+        }),
+      );
+      return usersWithTokenCount;
     });
   }
 }

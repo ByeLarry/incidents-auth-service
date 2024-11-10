@@ -9,19 +9,25 @@ import {
   JwtAuthDto,
   PaginationDto,
   RefreshTokenValueAndUserAgentDto,
+  SearchDto,
   SignInDto,
   SignUpDto,
   UpdateAdminDto,
   UserIdDto,
+  UserSearchDto,
 } from '../libs/dto';
 import { MicroserviceResponseStatusFabric } from '../libs/utils';
-import { AuthProvidersEnum, MsgAuthEnum } from '../libs/enums';
+import { AuthProvidersEnum, MsgAuthEnum, MsgSearchEnum } from '../libs/enums';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { AuthService } from './auth.service';
+import { SearchService } from '../libs/services';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly searchService: SearchService,
+  ) {}
 
   @MessagePattern(MsgAuthEnum.SIGNUP)
   async signup(@Payload() dto: SignUpDto) {
@@ -129,5 +135,14 @@ export class AuthController {
   @MessagePattern(MsgAuthEnum.USERS_STATS)
   async getStats() {
     return await this.authService.getStats();
+  }
+
+  @MessagePattern(MsgAuthEnum.SEARCH_USERS)
+  async searchUsers(@Payload() dto: SearchDto) {
+    const ids: UserSearchDto[] = await this.searchService.search<
+      SearchDto,
+      UserSearchDto[]
+    >(dto, MsgSearchEnum.SEARCH_USERS);
+    return this.authService.getUsersFromUserSearchDto(ids);
   }
 }
