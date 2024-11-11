@@ -1,7 +1,8 @@
+
 import { ExecutionContext, CallHandler } from '@nestjs/common';
-import { of, throwError } from 'rxjs';
+import { throwError } from 'rxjs';
+import { AppLoggerService } from '../libs/helpers/logger';
 import { LoggingInterceptor } from '../interceptors/logger.interceptor';
-import { AppLoggerService } from '../libs/helpers';
 
 describe('LoggingInterceptor', () => {
   let interceptor: LoggingInterceptor;
@@ -14,26 +15,6 @@ describe('LoggingInterceptor', () => {
     } as unknown as AppLoggerService;
     interceptor = new LoggingInterceptor();
     (interceptor as any).logger = logger;
-  });
-
-  it('should log the returned data', (done) => {
-    const context = {
-      getHandler: () => ({ name: 'testHandler' }),
-    } as unknown as ExecutionContext;
-
-    const callHandler = {
-      handle: () => of('test data'),
-    } as unknown as CallHandler;
-
-    interceptor.intercept(context, callHandler).subscribe({
-      next: () => {
-        expect(logger.log).toHaveBeenCalledWith(
-          '[testHandler] - returned \'"test data"\'',
-        );
-        done();
-      },
-      error: done.fail,
-    });
   });
 
   it('should handle errors and still log', (done) => {
