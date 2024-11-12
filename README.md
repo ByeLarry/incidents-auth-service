@@ -36,6 +36,7 @@ _Диаграммы можно сохранять и редактировать 
 - #### Клиентская часть *https://github.com/ByeLarry/incidents-frontend*
 - #### API-шлюз:  *https://github.com/ByeLarry/incidents-gateway*
 - #### Сервис марок (инцидентов): *https://github.com/ByeLarry/indcidents-marks-service*
+- #### Сервис поиска *https://github.com/ByeLarry/incidents-search-service*
 - #### Панель администратора *https://github.com/ByeLarry/incidents-admin-frontend.git*
 - #### Демонастрация функционала версии 0.1.0: *https://youtu.be/H0-Qg97rvBM*
 
