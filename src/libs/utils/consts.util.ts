@@ -6,5 +6,5 @@ export const TEST_ENV = 'test';
 export const DEVELOPMENT_ENV = 'development';
 export const SEARCH_RMQ_QUEUE = 'search_queue';
 export const SEARCH_RMQ_QUEUE_REPLY = 'search_queue_reply';
-export const DEFAULT_RMQ_TIMEOUT = 5000;
-export const TIMEOUT_ERROR_DELAY = 5000
+export const TIMEOUT_ERROR_DELAY = 10000
+export const DEFAULT_RMQ_TIMEOUT = TIMEOUT_ERROR_DELAY;
