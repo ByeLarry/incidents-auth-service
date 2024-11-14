@@ -145,4 +145,9 @@ export class AuthController {
     >(dto, MsgSearchEnum.SEARCH_USERS);
     return this.authService.getUsersFromUserSearchDto(ids);
   }
+
+  @MessagePattern(MsgAuthEnum.REINDEX)
+  async reindexSearhchEngine() {
+    return this.authService.reindexSearhchEngine();
+  }
 }

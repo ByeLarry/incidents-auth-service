@@ -78,13 +78,7 @@ export class AuthService implements OnApplicationBootstrap {
   }
 
   async onApplicationBootstrap() {
-    return await this.handleAsyncOperation(async () => {
-      const users = await this.userModel.find().select('-password -_id -__v');
-
-      if (isArray(users) && users.length === 0) return;
-
-      await this.searchService.update(users, MsgSearchEnum.SET_USERS);
-    });
+    this.reindexSearhchEngine();
   }
 
   public async signup(data: SignUpDto) {
@@ -567,6 +561,19 @@ export class AuthService implements OnApplicationBootstrap {
         }),
       );
       return usersWithTokenCount;
+    });
+  }
+
+  public async reindexSearhchEngine() {
+    return await this.handleAsyncOperation(async () => {
+      const users = await this.userModel.find().select('-password -_id -__v');
+
+      if (isArray(users) && users.length === 0)
+        MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+
+      await this.searchService.update(users, MsgSearchEnum.SET_USERS);
+
+      return MicroserviceResponseStatusFabric.create(HttpStatus.NO_CONTENT);
     });
   }
 }
