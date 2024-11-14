@@ -28,7 +28,7 @@ import {
   UsersViaPaginationDto,
 } from '../libs/dto';
 import { UserAndTokensDto } from '../libs/dto/user-and-tokens.dto';
-import { genSaltSync, hashSync } from 'bcrypt';
+import { compare, genSaltSync, hashSync } from 'bcrypt';
 import { AuthProvidersEnum, MsgSearchEnum, RolesEnum } from '../libs/enums';
 import { SearchService } from '../libs/services';
 import { isArray } from 'class-validator';
@@ -64,7 +64,6 @@ export class AuthService implements OnApplicationBootstrap {
     try {
       return await operation();
     } catch (error) {
-      console.log(error);
       if (error.name === 'JsonWebTokenError') {
         return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
       }
@@ -117,9 +116,12 @@ export class AuthService implements OnApplicationBootstrap {
       if (user.provider !== AuthProvidersEnum.LOCAL) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
       }
-      const isMatch = hashSync(data.password, genSaltSync(10));
+      const isMatch = await compare(
+        hashSync(data.password, genSaltSync(10)),
+        user.password,
+      );
       if (!isMatch) {
-        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
       const response = await this.createResponse(user, data.userAgent);
       return response;
@@ -289,9 +291,12 @@ export class AuthService implements OnApplicationBootstrap {
       if (!user) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
-      const isMatch = hashSync(data.password, genSaltSync(10));
+      const isMatch = await compare(
+        hashSync(data.password, genSaltSync(10)),
+        user.password,
+      );
       if (!isMatch) {
-        return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
       const response = await this.createResponse(user, data.userAgent);
       return response;
