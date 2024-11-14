@@ -551,6 +551,8 @@ export class AuthService implements OnApplicationBootstrap {
         .find({ id: { $in: data.map((user) => user.id) } })
         .select('-password -_id -__v');
 
+      if (isArray(users) && users.length === 0) return [];
+
       const usersWithTokenCount = await Promise.all(
         users.map(async (user) => {
           const userObj: UserDto = user.toObject();
