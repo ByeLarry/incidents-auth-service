@@ -116,10 +116,7 @@ export class AuthService implements OnApplicationBootstrap {
       if (user.provider !== AuthProvidersEnum.LOCAL) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
       }
-      const isMatch = await compare(
-        hashSync(data.password, genSaltSync(10)),
-        user.password,
-      );
+      const isMatch = await compare(data.password, user.password);
       if (!isMatch) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
@@ -291,10 +288,7 @@ export class AuthService implements OnApplicationBootstrap {
       if (!user) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
-      const isMatch = await compare(
-        hashSync(data.password, genSaltSync(10)),
-        user.password,
-      );
+      const isMatch = await compare(data.password, user.password);
       if (!isMatch) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
