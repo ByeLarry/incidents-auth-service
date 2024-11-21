@@ -23,47 +23,33 @@ import { ResponseService } from './response.service';
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
-    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly searchService: SearchService,
     private readonly responseService: ResponseService,
   ) {}
+
   public async jwtAuth(data: JwtAuthDto) {
     return handleAsyncOperation(async () => {
-      const user = await this.userModel.findOne({
-        email: data.email,
-        id: data.id,
-        roles: data.roles,
-      });
-      if (!user) {
+      const user = await this.findUser(data);
+
+      if (!user)
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
-      }
       if (user.isBlocked)
         return MicroserviceResponseStatusFabric.create(HttpStatus.FORBIDDEN);
-      const response: UserDto = {
-        name: user.name.trim(),
-        surname: user.surname.trim(),
-        email: user.email.trim(),
-        id: user.id.trim(),
-        activated: user.activated,
-        roles: user.roles,
-        provider: user.provider,
-      };
-      return response;
+
+      return this.buildUserDto(user);
     });
   }
 
   public async userRoles(accessTokenValue: string) {
-    return await handleAsyncOperationWithToken(async () => {
+    return handleAsyncOperationWithToken(async () => {
       const payload = this.jwtService.verify<IJwtPayload>(accessTokenValue);
       const user = await this.userModel.findOne({ id: payload.id });
 
       if (!user)
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
 
-      const response: UserRolesDto = {
-        roles: user.roles,
-      };
-      return response;
+      return { roles: user.roles } as UserRolesDto;
     });
   }
 
@@ -71,37 +57,72 @@ export class AuthService {
     data: AuthProvidersDto,
     provider: AuthProvidersEnum,
   ) {
-    return await handleAsyncOperation(async () => {
-      const userExist = await this.userModel.findOne({
-        email: data.email,
-      });
-      if (userExist) {
-        if (userExist.isBlocked)
-          return MicroserviceResponseStatusFabric.create(
-            HttpStatus.FORBIDDEN,
-            'User is blocked',
-          );
-        if (
-          userExist.provider === AuthProvidersEnum.LOCAL ||
-          userExist.provider !== provider
-        )
-          return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+    return handleAsyncOperation(async () => {
+      const existingUser = await this.userModel.findOne({ email: data.email });
 
-        return this.responseService.createResponse(userExist, data.userAgent);
+      if (existingUser) {
+        return this.handleExistingProviderUser(
+          existingUser,
+          provider,
+          data.userAgent,
+        );
       }
-      const user = await this.userModel.create({
-        name: data.name.trim(),
-        surname: data.surname.trim(),
-        email: data.email.trim(),
-        provider,
-      });
 
-      if (!user)
+      const newUser = await this.createProviderUser(data, provider);
+      if (!newUser)
         return MicroserviceResponseStatusFabric.create(HttpStatus.BAD_REQUEST);
 
-      await this.searchService.update(user, MsgSearchEnum.SET_USER);
+      await this.searchService.update(newUser, MsgSearchEnum.SET_USER);
+      return this.responseService.createResponse(newUser, data.userAgent);
+    });
+  }
 
-      return this.responseService.createResponse(user, data.userAgent);
+  private async findUser(data: JwtAuthDto) {
+    return this.userModel.findOne({
+      email: data.email,
+      id: data.id,
+      roles: data.roles,
+    });
+  }
+
+  private buildUserDto(user: User): UserDto {
+    return {
+      name: user.name.trim(),
+      surname: user.surname.trim(),
+      email: user.email.trim(),
+      id: user.id.trim(),
+      activated: user.activated,
+      roles: user.roles,
+      provider: user.provider,
+    };
+  }
+
+  private handleExistingProviderUser(
+    user: User,
+    provider: AuthProvidersEnum,
+    userAgent: string,
+  ) {
+    if (user.isBlocked)
+      return MicroserviceResponseStatusFabric.create(
+        HttpStatus.FORBIDDEN,
+        'User is blocked',
+      );
+
+    if (user.provider === AuthProvidersEnum.LOCAL || user.provider !== provider)
+      return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+
+    return this.responseService.createResponse(user, userAgent);
+  }
+
+  private async createProviderUser(
+    data: AuthProvidersDto,
+    provider: AuthProvidersEnum,
+  ) {
+    return this.userModel.create({
+      name: data.name.trim(),
+      surname: data.surname.trim(),
+      email: data.email.trim(),
+      provider,
     });
   }
 }

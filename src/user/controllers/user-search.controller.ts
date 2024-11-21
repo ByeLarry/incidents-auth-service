@@ -22,6 +22,6 @@ export class UserSearchController {
 
   @MessagePattern(MsgAuthEnum.REINDEX)
   async reindexSearhchEngine() {
-    return this.usersSearchService.reindexSearhchEngine();
+    return this.usersSearchService.reindexSearchEngine();
   }
 }

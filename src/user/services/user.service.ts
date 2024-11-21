@@ -1,9 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { IJwtPayload } from '../../interfaces';
-import { Token, User } from '../../schemas';
-import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { compare, genSaltSync, hashSync } from 'bcrypt';
 import {
   MicroserviceResponseStatusFabric,
   NO_USER_AGENT,
@@ -14,17 +13,16 @@ import {
   RefreshTokenValueAndUserAgentDto,
   SignInDto,
   SignUpDto,
-  UserDto,
   UserIdDto,
   UsersViaPaginationDto,
 } from '../../libs/dto';
-import { compare, genSaltSync, hashSync } from 'bcrypt';
 import { AuthProvidersEnum, MsgSearchEnum, RolesEnum } from '../../libs/enums';
 import { SearchService } from '../../libs/services';
 import {
   handleAsyncOperation,
   handleAsyncOperationWithToken,
 } from '../../libs/helpers';
+import { Token, User } from '../../schemas';
 import { ResponseService } from './response.service';
 
 @Injectable()
@@ -37,69 +35,69 @@ export class UserService {
     private readonly responseService: ResponseService,
   ) {}
 
-  public async signup(data: SignUpDto) {
-    return await handleAsyncOperation(async () => {
-      const hashedPassword = hashSync(data.password, genSaltSync(10));
+  private async findUserByEmail(email: string) {
+    return this.userModel.findOne({ email: email.trim() });
+  }
 
-      const existingUser = await this.userModel.findOne({
-        email: data.email.trim(),
-      });
+  private async findUserById(id: string) {
+    return this.userModel.findOne({ id });
+  }
+
+  private async handleDuplicateRoles(user: User){
+    return user.roles.includes(RolesEnum.ADMIN);
+  }
+
+  public async signup(data: SignUpDto) {
+    return handleAsyncOperation(async () => {
+      const existingUser = await this.findUserByEmail(data.email);
       if (existingUser) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
       }
+
+      const hashedPassword = hashSync(data.password, genSaltSync(10));
       const user = new this.userModel({
-        name: data.name.trim(),
-        surname: data.surname.trim(),
+        ...data,
         email: data.email.trim(),
         password: hashedPassword,
       });
 
-      Promise.all([
+      await Promise.all([
         user.save(),
         this.searchService.update(user, MsgSearchEnum.SET_USER),
       ]);
 
-      const response = await this.responseService.createResponse(
-        user,
-        data.userAgent,
-      );
-      return response;
+      return this.responseService.createResponse(user, data.userAgent);
     });
   }
 
   public async signin(data: SignInDto) {
-    return await handleAsyncOperation(async () => {
-      const user = await this.userModel.findOne({ email: data.email });
-      if (!user) {
+    return handleAsyncOperation(async () => {
+      const user = await this.findUserByEmail(data.email);
+      if (!user || user.provider !== AuthProvidersEnum.LOCAL) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
-      if (user.provider !== AuthProvidersEnum.LOCAL) {
-        return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
-      }
+
       const isMatch = await compare(data.password, user.password);
       if (!isMatch) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
-      const response = await this.responseService.createResponse(
-        user,
-        data.userAgent,
-      );
-      return response;
+
+      return this.responseService.createResponse(user, data.userAgent);
     });
   }
 
   public async me(data: RefreshTokenValueAndUserAgentDto) {
-    return await handleAsyncOperation(async () => {
+    return handleAsyncOperation(async () => {
       const token = await this.tokenModel.findOne({
         value: data.value,
         userAgent: data.userAgent || NO_USER_AGENT,
       });
+
       if (!token) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
       }
-      const user = await this.userModel.findOne({
-        id: token.userId,
-      });
+
+      const user = await this.findUserById(token.userId);
       if (!user) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
@@ -109,7 +107,7 @@ export class UserService {
   }
 
   public async logout(refreshTokenValue: string) {
-    return await handleAsyncOperation(async () => {
+    return handleAsyncOperation(async () => {
       const token = await this.tokenModel.findOne({ value: refreshTokenValue });
       if (!token) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.UNAUTHORIZED);
@@ -120,34 +118,36 @@ export class UserService {
   }
 
   public async deleteUser(dto: DeleteUserDto) {
-    return await handleAsyncOperationWithToken(async () => {
-      const user = await this.userModel
-        .findOne({ id: dto.userId })
-        .select('-password -__v');
-
-      if (!user)
+    return handleAsyncOperationWithToken(async () => {
+      const user = await this.findUserById(dto.userId);
+      if (!user) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+      }
 
-      const payload = this.jwtService.verify<IJwtPayload>(dto.accessTokenValue);
-      if (payload.id !== dto.userId && !payload.roles.includes(RolesEnum.ADMIN))
+      const payload = this.jwtService.verify(dto.accessTokenValue);
+      if (
+        payload.id !== dto.userId &&
+        !payload.roles.includes(RolesEnum.ADMIN)
+      ) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.FORBIDDEN);
+      }
 
-      if (user.roles.includes(RolesEnum.ADMIN))
+      if (await this.handleDuplicateRoles(user)) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+      }
 
-      Promise.all([
+      await Promise.all([
         this.tokenModel.deleteMany({ userId: user.id }),
         user.deleteOne(),
         this.searchService.update(user, MsgSearchEnum.DELETE_USER),
       ]);
 
-      const result = this.responseService.createUserDto(user);
-      return result;
+      return this.responseService.createUserDto(user);
     });
   }
 
-  async getAllUsers(dto: PaginationDto) {
-    return await handleAsyncOperation(async () => {
+  public async getAllUsers(dto: PaginationDto) {
+    return handleAsyncOperation(async () => {
       const skip = (dto.page - 1) * dto.limit;
       const total = await this.userModel.countDocuments();
 
@@ -156,39 +156,27 @@ export class UserService {
         .select('-password -_id -__v');
 
       const usersWithTokenCount = await Promise.all(
-        users.map(async (user) => {
-          const userObj: UserDto = user.toObject();
-
-          const tokensCount = await this.tokenModel.countDocuments({
-            userId: user.id,
-          });
-
-          userObj.tokensCount = tokensCount;
-
-          return userObj;
-        }),
+        users.map(async (user) => ({
+          ...user.toObject(),
+          tokensCount: await this.tokenModel.countDocuments({ userId: user.id }),
+        })),
       );
 
-      const response: UsersViaPaginationDto = {
+      return {
         total,
-        page: Number(dto.page),
-        limit: Number(dto.limit),
+        page: dto.page,
+        limit: dto.limit,
         users: usersWithTokenCount,
-      };
-
-      return response;
+      } as UsersViaPaginationDto;
     });
   }
 
-  async blockUser(dto: UserIdDto) {
-    return await handleAsyncOperation(async () => {
-      const user = await this.userModel
-        .findOne({ id: dto.id })
-        .select('-password');
-      if (!user)
-        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
-      if (user.roles.includes(RolesEnum.ADMIN))
+  public async blockUser(dto: UserIdDto) {
+    return handleAsyncOperation(async () => {
+      const user = await this.findUserById(dto.id);
+      if (!user || (await this.handleDuplicateRoles(user))) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
+      }
       user.isBlocked = true;
       await user.save();
       await this.tokenModel.deleteMany({ userId: dto.id });
@@ -196,13 +184,12 @@ export class UserService {
     });
   }
 
-  async unblockUser(dto: UserIdDto) {
-    return await handleAsyncOperation(async () => {
-      const user = await this.userModel
-        .findOne({ id: dto.id })
-        .select('-password');
-      if (!user)
+  public async unblockUser(dto: UserIdDto) {
+    return handleAsyncOperation(async () => {
+      const user = await this.findUserById(dto.id);
+      if (!user) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+      }
       user.isBlocked = false;
       await user.save();
       return this.responseService.createUserDto(user);
