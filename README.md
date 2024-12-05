@@ -31,6 +31,9 @@ _Диаграммы можно сохранять и редактировать 
 - ### Диаграмма классов (связь сущностей в БД)
   ![Диаграмма классов для сервиса авторизации](https://github.com/user-attachments/assets/b8fbcd32-c2e6-468a-989f-5ecf3078dac0)
 
+- ### Компоненты микросервиса авторизации
+  ![Компоненты микросервиса пользователей](https://github.com/user-attachments/assets/43ca904a-7ff4-4bca-ab57-f9d5fd8d3c03)
+
 ## Ссылки
 
 - #### Клиентская часть *https://github.com/ByeLarry/incidents-frontend*
