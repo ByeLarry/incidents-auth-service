@@ -6,6 +6,11 @@ export class AdminLoginDto {
   @Length(3)
   name: string;
 
+  @IsString()
+  @IsNotEmpty()
+  @Length(3)
+  surname: string;
+
   @IsNotEmpty()
   @IsString()
   @Length(8)

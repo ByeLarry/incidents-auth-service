@@ -27,7 +27,7 @@ export class AdminService {
 
   async adminLogin(data: AdminLoginDto) {
     return handleAsyncOperation(async () => {
-      const user = await this.findAdminByName(data.name);
+      const user = await this.findAdminByNameAndSurname(data.name, data.surname);
       if (!user || !(await this.isPasswordMatch(data.password, user.password))) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
       }
@@ -123,9 +123,10 @@ export class AdminService {
     });
   }
 
-  private async findAdminByName(name: string) {
+  private async findAdminByNameAndSurname(name: string, surname: string) {
     return this.userModel.findOne({
       name: name.trim(),
+      surname: surname.trim(),
       roles: { $in: [RolesEnum.ADMIN] },
     });
   }
