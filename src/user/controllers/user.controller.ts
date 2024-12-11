@@ -1,7 +1,7 @@
 import { Controller, HttpStatus } from '@nestjs/common';
 import {
   DeleteUserDto,
-  PaginationDto,
+  UsersPaginationDto,
   RefreshTokenValueAndUserAgentDto,
   SignInDto,
   SignUpDto,
@@ -53,9 +53,9 @@ export class UserController {
     return await this.userService.deleteUser(dto);
   }
 
-  @MessagePattern(MsgAuthEnum.GET_ALL_USERS)
-  async getAllUsers(@Payload() dto: PaginationDto) {
-    return await this.userService.getAllUsers(dto);
+  @MessagePattern(MsgAuthEnum.GET_ALL_USERS_PAGINATION)
+  async getAllUsersWithPagination(@Payload() dto: UsersPaginationDto) {
+    return await this.userService.getAllUsersWithPagination(dto);
   }
 
   @MessagePattern(MsgAuthEnum.BLOCK_USER)

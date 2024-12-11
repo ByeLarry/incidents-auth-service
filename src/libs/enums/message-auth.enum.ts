@@ -14,6 +14,7 @@ export enum MsgAuthEnum {
   YANDEX_AUTH = 'auth.yandex',
   ADMIN_LOGIN = 'admin.login',
   GET_ALL_USERS = 'user.all',
+  GET_ALL_USERS_PAGINATION = 'user.all.pagination',
   BLOCK_USER = 'user.block',
   UNBLOCK_USER = 'user.unblock',
   UPDATE_ADMIN = 'admin.update',

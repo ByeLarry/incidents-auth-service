@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, SortOrder } from 'mongoose';
 import { compare, genSaltSync, hashSync } from 'bcrypt';
 import {
   MicroserviceResponseStatusFabric,
@@ -9,14 +9,19 @@ import {
 } from '../../libs/utils';
 import {
   DeleteUserDto,
-  PaginationDto,
+  UsersPaginationDto,
   RefreshTokenValueAndUserAgentDto,
   SignInDto,
   SignUpDto,
   UserIdDto,
   UsersViaPaginationDto,
 } from '../../libs/dto';
-import { AuthProvidersEnum, MsgSearchEnum, RolesEnum } from '../../libs/enums';
+import {
+  AuthProvidersEnum,
+  MsgSearchEnum,
+  RolesEnum,
+  UserSortEnum,
+} from '../../libs/enums';
 import { SearchService } from '../../libs/services';
 import {
   handleAsyncOperation,
@@ -43,7 +48,7 @@ export class UserService {
     return this.userModel.findOne({ id });
   }
 
-  private async handleDuplicateRoles(user: User){
+  private async handleDuplicateRoles(user: User) {
     return user.roles.includes(RolesEnum.ADMIN);
   }
 
@@ -146,19 +151,29 @@ export class UserService {
     });
   }
 
-  public async getAllUsers(dto: PaginationDto) {
+  public async getAllUsersWithPagination(dto: UsersPaginationDto) {
     return handleAsyncOperation(async () => {
       const skip = (dto.page - 1) * dto.limit;
+      const sortKey: UserSortEnum = dto.sort;
       const total = await this.userModel.countDocuments();
-
       const users = await this.userModel
-        .find({}, {}, { skip, limit: dto.limit, sort: { createdAt: 1 } })
+        .find(
+          {},
+          {},
+          {
+            skip,
+            limit: dto.limit,
+          },
+        )
+        .sort(this.getSortOrder(sortKey))
         .select('-password -_id -__v');
 
       const usersWithTokenCount = await Promise.all(
         users.map(async (user) => ({
           ...user.toObject(),
-          tokensCount: await this.tokenModel.countDocuments({ userId: user.id }),
+          tokensCount: await this.tokenModel.countDocuments({
+            userId: user.id,
+          }),
         })),
       );
 
@@ -194,5 +209,21 @@ export class UserService {
       await user.save();
       return this.responseService.createUserDto(user);
     });
+  }
+
+  private getSortOrder(
+    sortKey: UserSortEnum,
+  ):
+    | string
+    | { [key: string]: SortOrder | { $meta: any } }
+    | [string, SortOrder][] {
+    switch (sortKey) {
+      case UserSortEnum.CREATED_AT_ASC:
+        return { createdAt: 1 };
+      case UserSortEnum.CREATED_AT_DESC:
+        return { createdAt: -1 };
+      default:
+        return { createdAt: -1 };
+    }
   }
 }
