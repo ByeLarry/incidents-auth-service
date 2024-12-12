@@ -189,6 +189,9 @@ export class UserService {
   public async blockUser(dto: UserIdDto) {
     return handleAsyncOperation(async () => {
       const user = await this.findUserById(dto.id);
+      if (!user) {
+        return MicroserviceResponseStatusFabric.create(HttpStatus.NOT_FOUND);
+      }
       if (!user || (await this.handleDuplicateRoles(user))) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
       }
