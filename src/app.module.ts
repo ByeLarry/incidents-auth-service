@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { mailerOptionsFactory } from './libs/utils';
 import { UserModule } from './user/user.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UserModule } from './user/user.module';
       inject: [ConfigService],
       useFactory: mailerOptionsFactory,
     }),
+    HealthModule,
   ],
 })
 export class AppModule {}

@@ -4,14 +4,21 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { LoggingInterceptor } from './libs/interceptors/logger.interceptor';
 import { AUTH_RMQ_QUEUE } from './libs/utils';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
+  const httpApp = await NestFactory.create(AppModule);
+  const configService = httpApp.get(ConfigService);
+  const port = configService.get<number>('PORT');
+
+  await httpApp.listen(port);
+
+  const microservice = await NestFactory.createMicroservice<MicroserviceOptions>(
     AppModule,
     {
       transport: Transport.RMQ,
       options: {
-        urls: [`${process.env.RMQ_HOST}`],
+        urls: [configService.get<string>('RMQ_HOST')],
         queue: AUTH_RMQ_QUEUE,
         queueOptions: {
           durable: false,
@@ -19,8 +26,9 @@ async function bootstrap() {
       },
     },
   );
-  app.useGlobalPipes(new ValidationPipe());
-  app.useGlobalInterceptors(new LoggingInterceptor());
-  await app.listen();
+
+  microservice.useGlobalPipes(new ValidationPipe());
+  microservice.useGlobalInterceptors(new LoggingInterceptor());
+  await microservice.listen();
 }
 bootstrap();
