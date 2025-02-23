@@ -32,7 +32,7 @@ _Диаграммы можно сохранять и редактировать 
   ![Диаграмма классов для сервиса авторизации](https://github.com/user-attachments/assets/b8fbcd32-c2e6-468a-989f-5ecf3078dac0)
 
 - ### Компоненты микросервиса авторизации
-  ![Компоненты микросервиса пользователей](https://github.com/user-attachments/assets/43ca904a-7ff4-4bca-ab57-f9d5fd8d3c03)
+  ![Компоненты микросервиса пользователей](https://github.com/user-attachments/assets/570cf108-0e40-4686-9bda-0607c15fe6e4)
 
 ## Ссылки
 
