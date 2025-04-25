@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { options, SearchServiceProvide } from '../libs/utils';
+import { mailerOptionsFactory, options, SearchServiceProvide } from '../libs/utils';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Token, TokenSchema, User, UserSchema } from '../schemas';
 import { AppLoggerService } from '../libs/helpers';
-import { SearchService } from '../libs/services';
+import { SearchService, EmailService } from '../libs/services';
 import { UserController } from './controllers/user.controller';
 import {
   UserService,
@@ -20,6 +20,9 @@ import {
   AuthController,
   TokenController,
 } from './controllers';
+import { ConfigModule } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   controllers: [
@@ -39,6 +42,7 @@ import {
     ResponseService,
     AdminService,
     UsersSearchService,
+    EmailService,
   ],
   imports: [
     JwtModule.registerAsync(options()),
@@ -46,6 +50,11 @@ import {
       { name: User.name, schema: UserSchema },
       { name: Token.name, schema: TokenSchema },
     ]),
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: mailerOptionsFactory,
+    }),
   ],
 })
 export class UserModule {}

@@ -29,6 +29,7 @@ import {
 } from '../../libs/helpers';
 import { Token, User } from '../../schemas';
 import { ResponseService } from './response.service';
+import { EmailService } from '../../libs/services/email.service';
 
 @Injectable()
 export class UserService {
@@ -38,6 +39,7 @@ export class UserService {
     @InjectModel(Token.name) private tokenModel: Model<Token>,
     private readonly searchService: SearchService,
     private readonly responseService: ResponseService,
+    private readonly emailService: EmailService,
   ) {}
 
   private async findUserByEmail(email: string) {
@@ -54,7 +56,7 @@ export class UserService {
 
   public async signup(data: SignUpDto) {
     return handleAsyncOperation(async () => {
-      const existingUser = await this.findUserByEmail(data.email);
+      const existingUser = await this.findUserByEmail(data.email.trim());
       if (existingUser) {
         return MicroserviceResponseStatusFabric.create(HttpStatus.CONFLICT);
       }
@@ -70,6 +72,8 @@ export class UserService {
         user.save(),
         this.searchService.update(user, MsgSearchEnum.SET_USER),
       ]);
+
+      await this.emailService.sendWelcomeEmail(data.email.trim(), data.name);
 
       return this.responseService.createResponse(user, data.userAgent);
     });

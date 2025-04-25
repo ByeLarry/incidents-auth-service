@@ -1,5 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { MailerOptions } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { join } from 'path';
 
 export const mailerOptionsFactory = (
   configService: ConfigService,
@@ -14,5 +16,12 @@ export const mailerOptionsFactory = (
   },
   defaults: {
     from: configService.get<string>('SMTP_USER'),
+  },
+  template: {
+    dir: join(__dirname, '..', '..', '..', 'src', 'templates', 'email'),
+    adapter: new HandlebarsAdapter(),
+    options: {
+      strict: true,
+    },
   },
 });

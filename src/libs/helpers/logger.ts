@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as winston from 'winston';
 import * as DailyRotateFile from 'winston-daily-rotate-file';
 
 @Injectable()
 export class AppLoggerService {
   private readonly logger: winston.Logger;
+  private readonly nestLogger = new Logger();
 
   constructor() {
     this.logger = winston.createLogger({
@@ -18,18 +19,21 @@ export class AppLoggerService {
           level: 'info',
           format: winston.format.combine(
             winston.format.timestamp(),
-            winston.format.printf(({ timestamp, level, message }) => {
-              return `[${timestamp}] ${level}: ${message}`;
-            }),
-          ),
-        }),
-        new winston.transports.Console({
-          level: 'info',
-          format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.timestamp(),
-            winston.format.printf(({ timestamp, level, message }) => {
-              return `[${timestamp}] ${level}: ${message}`;
+            winston.format.printf(({ timestamp, level, message, context }) => {
+              const date = new Date(timestamp);
+              const formattedDate = date
+                .toISOString()
+                .slice(0, 19)
+                .replace('T', ' ');
+              const levelMap = {
+                info: 'LOG',
+                error: 'ERROR',
+                warn: 'WARN',
+                debug: 'DEBUG',
+              };
+              const nestLevel = levelMap[level].padEnd(5);
+              const contextStr = context ? ` [${context}]` : '';
+              return `[${formattedDate}] ${nestLevel}${contextStr} ${message}`;
             }),
           ),
         }),
@@ -37,20 +41,32 @@ export class AppLoggerService {
     });
   }
 
-  log(message: string) {
-    this.logger.log('info', message);
+  log(message: string | undefined, context?: string) {
+    if (message === undefined) return;
+    if (!context) this.nestLogger.log(message)
+    else this.nestLogger.log(message, context)
+    this.logger.info({ message, context });
   }
 
-  error(message: string, trace?: string) {
-    if (trace) this.logger.error(message, { trace });
-    else this.logger.error(message);
+  error(message: string | undefined, trace?: string, context?: string) {
+    if (message === undefined) return;
+    const errorMessage = trace ? `${message} - ${trace}` : message;
+    if (!context) this.nestLogger.error(errorMessage);
+    else this.nestLogger.error(errorMessage, null, context);
+    this.logger.error({ message: errorMessage, context });
   }
 
-  warn(message: string) {
-    this.logger.warn(message);
+  warn(message: string | undefined, context?: string) {
+    if (message === undefined) return;
+    if (!context) this.nestLogger.warn(message);
+    else this.nestLogger.warn(message, context);
+    this.logger.warn({ message, context });
   }
 
-  debug(message: string) {
-    this.logger.debug(message);
+  debug(message: string | undefined, context?: string) {
+    if (message === undefined) return;
+    if (!context) this.nestLogger.debug(message);
+    else this.nestLogger.debug(message, context);
+    this.logger.debug({ message, context });
   }
 }
