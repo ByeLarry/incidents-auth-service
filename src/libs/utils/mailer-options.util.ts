@@ -18,7 +18,7 @@ export const mailerOptionsFactory = (
     from: configService.get<string>('SMTP_USER'),
   },
   template: {
-    dir: join(__dirname, '..', '..', '..', 'src', 'templates', 'email'),
+    dir: join(__dirname, '..', '..', '..', 'dist', 'templates', 'email'),
     adapter: new HandlebarsAdapter(),
     options: {
       strict: true,
