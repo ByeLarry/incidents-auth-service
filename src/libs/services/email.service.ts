@@ -41,8 +41,8 @@ export class EmailService {
       this.logger.log('Email service is enabled and configured');
     }
 
-    this.logger.debug(`Template directory: ${join(__dirname, '..', '..', '..', 'dist', 'templates', 'email')}`);
-    this.logger.debug(`Welcome template exists: ${existsSync(join(__dirname, '..', '..', '..', 'dist', 'templates', 'email', 'welcome.hbs'))}`);
+    this.logger.debug(`Template directory: ${join(__dirname, '..', '..', '..', 'src', 'templates', 'email')}`);
+    this.logger.debug(`Welcome template exists: ${existsSync(join(__dirname, '..', '..', '..', 'src', 'templates', 'email', 'welcome.hbs'))}`);
   }
 
   async sendWelcomeEmail(email: string, name?: string) {
